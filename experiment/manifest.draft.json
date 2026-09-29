@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "status": "draft",
+  "benchmarkStatus": "not-run",
+  "experimentId": "fde-travel-v1",
+  "seedCommit": null,
+  "scenarioFamilies": 12,
+  "repeats": 3,
+  "plannedEpisodes": 144,
+  "scenarioManifestDigest": null,
+  "holdoutDigest": null,
+  "rubricDigest": null,
+  "order": null,
+  "orderSeed": null,
+  "arms": {
+    "baseline": { "host": "copilot", "model": null, "methodPackageCount": 0, "status": "not-run" },
+    "hve": { "host": "copilot", "model": null, "methodRevision": "180c85492b5a20380927200ddf926fd712e7d9d1", "status": "not-run" },
+    "superpowers": { "host": "copilot", "model": null, "methodRevision": "8ca22dba9a94f28898bbce59f2537ff4d87c747d", "status": "not-run" },
+    "gstack": { "host": "codex", "track": "native-observational-not-controlled-ranking", "model": null, "methodRevision": "65bfb0ce49da807698359ca033a05709e342c684", "status": "not-run" }
+  },
+  "runtime": { "provider": "copilot-sdk", "model": null, "liveEnabled": false },
+  "reviewer": null,
+  "isolation": null,
+  "limits": null,
+  "approval": null
+}

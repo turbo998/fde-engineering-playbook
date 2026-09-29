@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.local/
+coverage/
+*.tsbuildinfo
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+.env
+.env.*
+!.env.example
+private/
+holdout/
+candidates/
+transcripts/
+*.log

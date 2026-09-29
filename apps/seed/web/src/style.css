@@ -1,0 +1,12 @@
+:root { font-family: system-ui, sans-serif; color: #172536; background: #f2f5f8; line-height: 1.65; }
+body { margin: 0; }
+main { max-width: 58rem; margin: 3rem auto; padding: 0 1.5rem; }
+h1 { font-size: clamp(1.8rem, 5vw, 2.8rem); line-height: 1.25; }
+h2 { font-size: 1.3rem; }
+.eyebrow { color: #38546c; letter-spacing: .08em; font-size: .85rem; }
+.notice { display: inline-block; background: #ffedb3; color: #513900; padding: .5rem 1rem; border-radius: .4rem; font-weight: 700; }
+section { background: white; border: 1px solid #c8d4df; border-radius: .6rem; padding: 1.2rem 1.5rem; margin-top: 1.2rem; }
+dl { display: grid; grid-template-columns: minmax(9rem, 1fr) 1fr; gap: .6rem 1rem; }
+dt { font-weight: 600; }
+dd { margin: 0; }
+[role="alert"] { color: #a01717; }
