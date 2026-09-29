@@ -30,11 +30,15 @@ gstack Codex 路径的 setup-time 模型 profile 与 runtime 模型选择分开�
 
 CLI 的 AI credit limit 是 **soft cap**；已在途模型请求可能越界。准入账本在发请求前保守预留输出 token，取消和失败不退款；跨进程 SQLite 事务避免双重分配。缺失计量必须保留 null 并暂停后续请求，不能视为零。实际 provider 可能在一个 SDK turn 中内部调用多次，因此当前 runner 一律禁用 live，不能凭本地 `reserve` 证明远端硬限额。
 
+当前准入原语遵循串行约束：任何未结算 reservation 都阻止所有组的新准入，包括 worker 丢失后重开账本；不能将其 credits 汇总为零后继续。仅对该 reservation 明确 `settle` 已知用量后恢复准入；`settle(null)` 和 token 超额继续持久阻塞，没有自动解封或猜测用量。
+
 credits 与货币金额分开。只有已确认的计价单位、价格生效时间、缓存价格、长上下文档位和汇率依据才允许货币换算；没有则 unavailable。模型选择不得用 `auto` 或浮动别名代替精确批准值。重试策略与取消边界须在首次运行前固定。
 
 ## 运行和外部评价
 
 每个 episode 恢复同一初始数据库、时钟、合同/政策版本和故障日程；固定事件顺序及用户动作。重新启动是脚本步骤，不能偷偷重置业务状态。不同重复的模型随机性保留；可配置的采样参数统一，不可配置时标 unavailable。
+
+当前 `runOfflineEpisode` 只验证明确标识的 HTTP 测试双协议，不接入候选或模型；独立应用目录由测试控制器创建，步骤内真实重启保留该应用数据库。私有准备材料的自然语言 `episode` 只作数据，与严格 typed `steps` 不同；schema/引用成功不代表脚本运行。追加断言超出 primitive oracle 时列为未覆盖，不换场景、删断言或自动补 golden；原语成功也只能记 partial。seed allowlist/canary 只证明导出内容边界，不能计为已完成跨组 OS 隔离。
 
 外部评估读取合成服务尝试/效果账本、持久状态与 UI/API 观察；不信任应用文本总结。真实外发恒为零，但 attempted send 仍可取消资格。正确升级/拒绝通过相应 oracle，不强制“所有旅客成功预订”。
 

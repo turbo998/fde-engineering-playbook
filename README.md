@@ -45,7 +45,22 @@ npm run benchmark
 
 最后一条**应以非零状态退出**：草稿不能授权实测。即使填满 manifest，当前执行器也仍拒绝 live，因为逐模型请求控制、操作系统隔离、私有脚本和正式授权尚未完成。
 
-`packages/lab` 提供模拟资源接口、持久效果账本、外部评估原语、额度准入原语和 SDK 协议映射。公开单元测试使用明确标识的 `offline-test-double` 与通用协议样例，不是四组应用，更不是未公开留出场景。
+`packages/lab` 提供模拟资源接口、持久效果账本、外部评估原语、额度准入原语和 SDK 协议映射。新增通用 HTTP episode 驱动只接收显式 `127.0.0.1:端口` 测试源，禁自动 redirect；候选适配器直接拒绝。公开 known-good/bad 子进程仅为 `offline-test-double`，用于证明事件、审批命令、重启、故障与独立 oracle 对接，不是四组应用或未公开留出场景。
+
+## 种子导出与私有准备材料校验
+
+```powershell
+New-Item -ItemType Directory -Force .local | Out-Null
+npm run seed:export -- .local\neutral-seed
+# 将上一条返回的 manifestHash 存入 $env:FDE_SEED_HASH，再独立核验：
+npm run seed:verify -- .local\neutral-seed $env:FDE_SEED_HASH
+# 私有文件只读校验；路径/hash 由外部提供，不写入仓库：
+node --import tsx scripts\validate-private.ts $env:FDE_PRIVATE_FIXTURE $env:FDE_PRIVATE_FIXTURE_SHA256
+```
+
+导出目标必须不存在、父目录必须已存在且无链接；导出 20 个明确 allowlist 文件及一份 hash manifest，重建精简 package/lock，不复制 `.git`、`node_modules`、`.local`、研究、方法配置、评测器或测试双。核验在安装依赖**之前**进行；使用独立保存的可信 hash，不能信任可同时篡改的目录内 manifest。它是制品边界，不是 OS 沙箱，也不能证明零全局规则。
+
+私有校验器只输出数量、原始字节 SHA256 与静态错误/覆盖代码，不打印文件路径、标题、正文或 Zod 细节；非零退出表示校验失败。自然语言 `episode` 只作为数据，不 eval/exec、不转交模型。schema/引用通过仍表示 `executedEpisodes=0`；`additionalAssertions`、业务审批绑定与语义事实支持均未因此通过。详见[架构边界](docs/architecture.md)及[实际状态](docs/status.md)。
 
 ## 公开与共享边界
 

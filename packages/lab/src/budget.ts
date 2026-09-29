@@ -47,6 +47,9 @@ export class BudgetLedger {
         throw new Error("Budget clock reversed or deadline reached");
       }
       if (request.maxOutputTokens > this.limits.maxOutputTokensPerCall) throw new Error("Per-call token cap exceeded");
+      if (this.db.prepare(
+        "SELECT 1 FROM budget_calls WHERE settled=0 OR credits IS NULL OR output IS NULL LIMIT 1"
+      ).get()) throw new Error("Budget blocked: unsettled usage requires reconciliation");
       for (const scope of ["total", "arm"] as const) {
         const row = scope === "total" ?
           this.db.prepare("SELECT COUNT(*) AS calls, COALESCE(SUM(reserved),0) AS tokens, COALESCE(SUM(credits),0) AS credits FROM budget_calls").get() :

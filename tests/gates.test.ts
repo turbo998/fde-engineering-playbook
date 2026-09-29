@@ -47,6 +47,22 @@ const reservation = {
   requestId: "unit-r1", arm: "baseline", episodeId: "unit-episode",
   phase: "smoke", maxOutputTokens: 4, at: clock
 };
+test("unsettled usage blocks serial admission across reopen until explicit known settlement", (t) => {
+  const space = sandbox(t);
+  let budget = space.keep(new BudgetLedger(space.path, limits(), clock));
+  budget.reserve(reservation);
+  assert.equal(budget.summary().aiCredits, null);
+  budget.close();
+  budget = space.keep(new BudgetLedger(space.path, limits(), clock));
+  assert.throws(() => budget.reserve({ ...reservation, requestId: "unit-recovered" }), /unsettled/);
+  assert.equal(budget.summary().requests, 1);
+  budget.settle({ requestId: reservation.requestId, outputTokens: 2, aiCredits: 0.25 });
+  budget.reserve({ ...reservation, requestId: "unit-recovered" });
+  assert.equal(budget.summary().requests, 2);
+  assert.equal(budget.summary().aiCredits, null);
+  assert.throws(() => budget.settle({ requestId: "unit-recovered", outputTokens: null, aiCredits: null }), /Unknown usage/);
+  assert.throws(() => budget.reserve({ ...reservation, requestId: "still-blocked", episodeId: "new" }), /blocked/);
+});
 test("numeric limits must be positive, finite and integral for counts", (t) => {
   const space = sandbox(t);
   assert.throws(() => new BudgetLedger(space.path, { ...limits(), maxOutputTokensPerCall: 0 }, clock));
@@ -58,12 +74,15 @@ test("smoke, repeat, retry and final reservations share persistent caps", (t) =>
   budget.reserve(reservation);
   budget.close();
   budget = space.keep(new BudgetLedger(space.path, limits(), clock));
+  budget.settle({ requestId: "unit-r1", outputTokens: 2, aiCredits: 0.25 });
   budget.reserve({ ...reservation, requestId: "unit-r2", phase: "retry" });
+  budget.settle({ requestId: "unit-r2", outputTokens: 2, aiCredits: 0.25 });
   assert.throws(() => budget.reserve({ ...reservation, requestId: "unit-r3", phase: "repeat" }), /attempt cap/);
   budget.reserve({ ...reservation, requestId: "unit-r4", episodeId: "other", phase: "final" });
+  budget.settle({ requestId: "unit-r4", outputTokens: 2, aiCredits: 0.25 });
   assert.throws(() => budget.reserve({ ...reservation, requestId: "unit-r5", episodeId: "new" }), /arm budget/);
   assert.equal(budget.summary().requests, 3);
-  assert.equal(budget.summary().aiCredits, null);
+  assert.equal(budget.summary().aiCredits, 0.75);
 });
 test("total budget is shared across arms, including simultaneous connections", (t) => {
   const space = sandbox(t);
@@ -71,6 +90,10 @@ test("total budget is shared across arms, including simultaneous connections", (
   const b = space.keep(new BudgetLedger(space.path, limits(), clock));
   for (let i = 0; i < 5; i++) {
     (i % 2 ? a : b).reserve({ ...reservation, requestId: `unit-${i}`, episodeId: `episode-${i}`, arm: i < 3 ? "hve" : "gstack" });
+    assert.throws(() => (i % 2 ? b : a).reserve({
+      ...reservation, requestId: `unit-competing-${i}`, episodeId: `other-${i}`
+    }), /unsettled/);
+    (i % 2 ? b : a).settle({ requestId: `unit-${i}`, outputTokens: 2, aiCredits: 0.25 });
   }
   assert.throws(() => a.reserve({ ...reservation, requestId: "over" }), /total budget/);
   assert.equal(a.summary().requests, 5);

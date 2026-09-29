@@ -18,6 +18,9 @@
     "benchmark": "tsx packages/lab/src/runner.ts measured",
     "smoke:offline": "tsx scripts/smoke-offline.ts",
     "check:public": "tsx scripts/check-public.ts",
+    "seed:export": "tsx scripts/export-seed.ts export",
+    "seed:verify": "tsx scripts/export-seed.ts verify",
+    "fixtures:validate": "tsx scripts/validate-private.ts",
     "check": "npm run typecheck && npm run lint && npm test && npm run build && npm run smoke:offline && npm run check:public"
   },
   "dependencies": {

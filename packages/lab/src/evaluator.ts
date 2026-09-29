@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { CaseStatus, Count, EffectRequest, Id } from "../../contracts/src/index.js";
 import { canonicalJson } from "./encoding.js";
-import { Snapshot } from "./simulator.js";
+import { Snapshot } from "./dataset.js";
 
 export const Observation = z.strictObject({
   tenantId: Id, caseId: Id, status: CaseStatus,

@@ -7,14 +7,14 @@ import { digest } from "../packages/lab/src/encoding.js";
 export function sandbox(t: TestContext) {
   mkdirSync(resolve(".local"), { recursive: true });
   const directory = mkdtempSync(resolve(".local", "unit-"));
-  const resources: { close(): void }[] = [];
-  t.after(() => {
-    for (const resource of resources.reverse()) resource.close();
+  const resources: { close(): void | Promise<void> }[] = [];
+  t.after(async () => {
+    for (const resource of resources.reverse()) await resource.close();
     rmSync(directory, { recursive: true });
   });
   return {
     path: join(directory, "test.sqlite"),
-    keep<T extends { close(): void }>(resource: T): T { resources.push(resource); return resource; }
+    keep<T extends { close(): void | Promise<void> }>(resource: T): T { resources.push(resource); return resource; }
   };
 }
 

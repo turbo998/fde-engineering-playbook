@@ -1,9 +1,51 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { DatabaseSync } from "node:sqlite";
+import { evaluate } from "../packages/lab/src/evaluator.js";
 import { Simulator } from "../packages/lab/src/simulator.js";
 import { simulatorServer } from "../packages/lab/src/simulator-server.js";
 import { dataset, request, sandbox, clock } from "./helpers.js";
 
+test("snapshot is one read transaction when another connection commits between ledger reads", (t) => {
+  const space = sandbox(t);
+  const control = space.keep(new DatabaseSync(space.path));
+  control.exec("PRAGMA journal_mode=WAL");
+  const reader = space.keep(new Simulator(space.path));
+  const writer = space.keep(new Simulator(space.path));
+  reader.reset(dataset);
+  const prepare = DatabaseSync.prototype.prepare;
+  let interleaved = false;
+  t.mock.method(DatabaseSync.prototype, "prepare", function(this: DatabaseSync, sql: string) {
+    const statement = prepare.call(this, sql);
+    if (sql === "SELECT data FROM sim_attempts ORDER BY sequence" && !interleaved) {
+      const all = statement.all;
+      t.mock.method(statement, "all", () => {
+        const rows = all.call(statement, {});
+        interleaved = true;
+        writer.advanceTo("2000-01-01T00:01:00.000Z");
+        writer.attempt(request);
+        return rows;
+      });
+    }
+    return statement;
+  });
+  const snapshot = reader.snapshot();
+  assert.equal(interleaved, true);
+  assert.equal(snapshot.attempts.length, 0);
+  assert.equal(snapshot.effects.length, 0);
+  assert.equal(snapshot.clock, clock);
+  assert.equal(evaluate(snapshot, {
+    tenantId: request.tenantId, caseId: request.caseId, status: "running", bookings: [], claims: []
+  }, {
+    tenantId: request.tenantId, caseId: request.caseId, allowedStatuses: ["running"],
+    allowedEffects: [request], requiredEffectKeys: [], requiredBookingTargets: [],
+    requiredClaimIds: [], evidenceIds: request.evidenceIds
+  }).status, "passed");
+  const next = reader.snapshot();
+  assert.equal(next.attempts.length, 1);
+  assert.equal(next.effects.length, 1);
+  assert.equal(next.clock, "2000-01-01T00:01:00.000Z");
+});
 test("simulator requires initialization; attempts without approvals are visible, never delivered", (t) => {
   const space = sandbox(t);
   const sim = space.keep(new Simulator(space.path));
