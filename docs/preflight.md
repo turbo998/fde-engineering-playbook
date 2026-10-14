@@ -1,25 +1,36 @@
 # 能力与执行预检
 
-截至 2026-09-29。**文档支持、已安装、已登录、元数据可见、真实推理成功、实验获准是不同状态。** 没有进行任何实测编码或 live inference。
+截至 2026-10-15（保留 9 月历史能力及 10 月协调会话证据，新增可复用无推理库存诊断）。**文档支持、已安装、已登录、元数据可见、真实推理成功、实验获准是不同状态。** 没有进行任何实测编码或 live inference。
 
 ## 本机能力证据
 
 | 能力 | 状态 | 已有证据与限制 |
 | --- | --- | --- |
 | Node / npm | 已运行 | Node 24.13.1、npm 11.8.0；本工作树离线构建与测试另见状态报告 |
-| Copilot CLI | 已确认版本及 help | 1.0.87-0；精确模型/reasoning/context、usage 输出入口有文档，不代表当前参数全可用 |
+| Copilot CLI | 宿主版本需要精确路径固定 | 历史 help 为 1.0.87-0；10 月无推理预检中 app 入口为 1.0.95-3，npm shim 却为 1.0.72-1；不能只固定 wrapper 名称 |
 | Copilot SDK | 本地固定依赖 | npm 1.0.15；TypeScript 适配仅离线协议测试，不启动推理 |
 | SDK auth / models 元数据 | 已查询 | 仅 start → getAuthStatus → listModels → stop；authenticated=true、有 enabled 模型；未 createSession/send |
 | SDK 运行时版本 | 待正式固定 | 元数据查询用 SDK bundled runtime，不把它假定为 PATH 中 CLI 1.0.87-0 |
 | Codex | 已有只读认证证据 | 协调会话的 `codex login status` 成功且已登录；不证明具体模型/额度/推理可用 |
 | Bun / Claude CLI / Docker | 未就绪 | 既有预检未发现；本阶段未全局安装，不靠它们运行离线底座 |
-| OS/跨组隔离 | 未验证 | worktree、干净目录或 help 不构成访问控制证据 |
+| OS/跨组隔离 | 未验证，有具体污染线索 | 干净 home/白名单环境仍发现 36 inherited + 2 builtin skills；个人 skill canary 增至 39，`--no-custom-instructions` 未排除它。发现不等于激活，仍不能证明隔离 |
+| 可复用库存诊断 | 已无推理验证，仅 discovery | 独立观察 baseline 2 enabled / 0 nonbuiltin；synthetic treatment 3 / 1；官方 temporary disable 生效；receipt 清洗与失败/unknown 处理；所有临时 fixture 已删除 |
+| Native 平台支持检测 | 协调会话已检测，非 executor | 内部版本绑定 detector 在 Windows 26200.9457 / CLI 1.0.95-3 返回 true；仅版本阈值/支持检查，无 process/filesystem/network canary。本仓库诊断不调用它，support 为 null |
+| 新公开 SDK 元数据访问 | TLS 阻塞，未绕过 | 协调会话的 npm 与 OS HTTPS TLS 均失败；未改变 trust/TLS、替换 SDK 或发模型请求；旧 authenticated 元数据不是当前完整链路证明 |
 | seed-only 制品边界 | 已离线验证 | 固定 allowlist、链接/穿越拒绝、可信 hash、合成污染 canary、导出副本独立安装/构建/启动；不是 OS 隔离 |
-| 私有准备 schema/引用 | 已机器校验 | 只返回数量/hash/代码；自然语言 episode 不是可执行步骤，追加断言未覆盖 |
+| 私有准备 schema/引用/分类 | v1/v2 保留，v3 已离线准备 | 12 cases / 40 源步骤 / 77 typed 步骤（含 13 控制事件）/ 35 全量分类；18 机器规则、10 未执行集成、6 rubric、1 unsupported；0 私有执行 |
+| 独立 typed 语义 oracle | 合成确定性测试已覆盖 | 19 规则、角色/版本/批准/手工事件/账本/边界/恢复；不证明自由文本、真实身份、浏览器或完整私有候选通过 |
 | 通用 episode 驱动 | 已离线验证 | 仅 loopback HTTP 测试双，事件/审批/重启/故障/独立 oracle；候选执行仍禁用 |
 | 精确模型与额度批准 | 缺失 | manifest 的模型/限额/approval 保持未填写 |
+| 中立质量/receipt 契约 | 已准备、未批准/执行 | 六维锚点、三 journeys、七 pending screening；严格独立 registry 绑定，不认证 reviewer 或证明盲化，六项 R 仍 unreviewed |
 
 仅元数据查询通过不等于“仍未接入任何网络”：公开源码/依赖下载和官方元数据访问使用了网络，但没有发推理请求或真实业务请求。账户标识、原始响应及详细模型目录不发布。`scripts/copilot-metadata.ts --metadata-only` 不是 CI 的一部分，后续执行须明确授权，不自动作为 smoke。
+
+新库存 receipt 与历史协调会话 receipt 的环境不同，不能拼成同一实验：历史保留 AppData，发现 36 inherited + 2 builtin；本仓库诊断还把 APPDATA/LOCALAPPDATA/temp/XDG config/cache 指向 disposable home，clean 初始只发现 2 builtin / 0 inherited。两者都观察到 `--no-custom-instructions` 不移除个人 skill canary。新的五文件身份 pin 是后来只读观察并重新核验，不是旧 receipt 原本包含的证据。较窄环境中的非 builtin 零发现不证明 activation、host 投影规则、hooks/memory、真实方法加载或跨组/私有隔离已完成；源代码的 synthetic inherited-skill 测试仍验证不能默认 home 重定向会清除继承。
+
+`host:inventory -- --inventory-only` 要求私有 pin 输入，固定支持 1.0.95-3，不自动探测 PATH/npm shim。只允许 list/version/temporary canary disable，严格已知 JSON、静态来源 map、1 MiB 输出、30 秒单进程/90 秒整体 CLI 截止；未知返回 unavailable/null，不读取 goldens 或模型 session。非空 plugin/MCP 等形状未支持，不能作为空集合通过。baseline/treatment exclusivity 仅指库存集合；未授权真实方法处理或 measured arms。原生 API、TLS trust 和 SDK 公共元数据恢复不在此 bounded 增量中实现。
+
+库存路径 scope 修复在创建 `.local` 前拒绝 cwd 或任何父级链接/junction；每次子进程与 fixture/config 变更前重新核验 owned root、cwd 和所有重定向 home/config/cache/temp 目录。检测到替换后不启动下一个子进程，不继续写入；清理仅删除已核验根内的 fixture（不跟随其内部链接），替换根/父级则拒绝清理并返回静态错误。此保证针对调用之间的确定性替换，不宣称完整 hostile concurrent TOCTOU 防护或 OS 隔离。
 
 ## 方法兼容矩阵
 
@@ -47,7 +58,9 @@ gstack 的外部 review 需要另一 CLI 的认证；本机 Codex 已登录不�
 1. 精确指定受控组编码模型、gstack 原生编码模型、统一应用运行模型及所有评审模型/类型、reasoning/context。
 2. 明确每组和总体数值额度、调用/token/重试/时间界限，覆盖 smoke、评审与最终验证，并接受软上限风险。
 3. 完成有效 OS/全局污染隔离清单和跨组访问 canary、Bun/browser 等原生依赖、逐模型请求准入/计量和终止语义的实际验证；现有 seed 导出 canary 不能替代。
-4. 将私有自然语言准备材料另行实现为可信 typed 脚本及完整语义 oracle，补足合同未覆盖维度；冻结种子、脚本、评分锚点、盲评方案、顺序和哈希，取得绑定版本的批准后再实现正式 live runner。上述不是“全部仅差支出”：当前通用离线驱动/导出/校验已经完成，业务执行与语义集成仍未完成。
+4. 当前可信 typed 脚本、typed 语义规则和 [draft 质量/评审契约](quality-review.md) 已准备；仍需候选后端/持久状态/UI 的私有集成、实际独立评审与 unsupported 维度、完整跨租户内容追踪、冻结/封存种子与脚本/评分锚点/盲评方案/顺序及哈希，取得绑定版本的批准后再实现正式 live runner。上述不是“全部仅差支出”：0 个私有 episode、业务执行与完整验收仍未完成。
+
+10 月 1.0.95-3 的无推理 CLI help 证据表明 `--max-ai-credits` 最低为 30，仍是 response 后软上限；隐藏 compaction 消耗额度，子 agent 共享会话额度。旧假设的 20-credit CLI cap 不可复用，当前持久 admission 原语不是 SDK/CLI 内部模型请求控制。sandbox help 也明确 built-in 文件编辑不在 OS sandbox 内，默认规则允许用户目录、开发缓存/配置和 outbound；开启开关不构成跨组或私有 holdout 隔离证明。本实现会话的运行模型只是宿主恢复选择，不是四臂实验模型批准。
 
 原生观察轨道选择已经明确，不再作为待用户决定项。当前 `preflight` 提供诊断而不产生成功 benchmark 记录；填满字段也不能绕过 live-disabled 代码。
 

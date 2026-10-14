@@ -20,6 +20,7 @@ test("seed exact allowlist excludes synthetic method, research, history, logs, d
   const { sourceRoot, destination } = source(t);
   for (const file of [".git/config", ".github/skills/method.md", ".local/transcript.json",
     "node_modules/foreign/index.js", "docs/research.md", "packages/lab/canary.ts",
+    "packages/lab/src/quality-rubric.ts", "packages/lab/src/review-receipt.ts",
     "apps/candidate/canary.ts", "AGENTS.md", "output.log"]) {
     const path = join(sourceRoot, file);
     mkdirSync(dirname(path), { recursive: true });

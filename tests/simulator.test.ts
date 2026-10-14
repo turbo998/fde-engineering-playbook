@@ -4,6 +4,9 @@ import { DatabaseSync } from "node:sqlite";
 import { evaluate } from "../packages/lab/src/evaluator.js";
 import { Simulator } from "../packages/lab/src/simulator.js";
 import { simulatorServer } from "../packages/lab/src/simulator-server.js";
+import { digest } from "../packages/lab/src/encoding.js";
+import { evaluateSemantic } from "../packages/lab/src/semantic-evaluator.js";
+import { semanticVector } from "./semantic-helpers.js";
 import { dataset, request, sandbox, clock } from "./helpers.js";
 
 test("snapshot is one read transaction when another connection commits between ledger reads", (t) => {
@@ -33,6 +36,7 @@ test("snapshot is one read transaction when another connection commits between l
   assert.equal(interleaved, true);
   assert.equal(snapshot.attempts.length, 0);
   assert.equal(snapshot.effects.length, 0);
+  assert.deepEqual(snapshot.causalEvents, []);
   assert.equal(snapshot.clock, clock);
   assert.equal(evaluate(snapshot, {
     tenantId: request.tenantId, caseId: request.caseId, status: "running", bookings: [], claims: []
@@ -44,6 +48,7 @@ test("snapshot is one read transaction when another connection commits between l
   const next = reader.snapshot();
   assert.equal(next.attempts.length, 1);
   assert.equal(next.effects.length, 1);
+  assert.equal(next.causalEvents?.length, 1);
   assert.equal(next.clock, "2000-01-01T00:01:00.000Z");
 });
 test("simulator requires initialization; attempts without approvals are visible, never delivered", (t) => {
@@ -115,6 +120,10 @@ test("read failures are explicit; retry counts and clock are durable", (t) => {
   sim = space.keep(new Simulator(space.path));
   assert.equal(sim.read("unit", "hotel").status, "ok");
   assert.equal(sim.snapshot().reads, 2);
+  assert.deepEqual(sim.snapshot().readAttempts, [
+    { sequence: 1, at: clock, tenantId: "unit", kind: "hotel", outcome: "fault", faultCode: "retrieval_failure" },
+    { sequence: 2, at: "2000-01-01T00:01:00.000Z", tenantId: "unit", kind: "hotel", outcome: "ok", faultCode: null }
+  ]);
   assert.equal(sim.snapshot().clock, "2000-01-01T00:01:00.000Z");
 });
 test("duplicate faults and malformed reset fail without destroying existing state", (t) => {
@@ -125,6 +134,18 @@ test("duplicate faults and malformed reset fail without destroying existing stat
   const fault = { operation: "read", call: 1, code: "retrieval_failure" };
   assert.throws(() => sim.reset({ ...dataset, faults: [fault, fault] }));
   assert.equal(sim.snapshot().effects.length, 1);
+});
+test("legacy read counts remain explicitly unavailable until a clean reset, never invented as zero", (t) => {
+  const space = sandbox(t);
+  const sim = space.keep(new Simulator(space.path)); sim.reset(dataset);
+  const control = space.keep(new DatabaseSync(space.path));
+  control.exec("UPDATE sim_meta SET reads=2");
+  assert.equal(sim.snapshot().reads, 2);
+  assert.equal(sim.snapshot().readAttempts, null);
+  sim.read("unit", "hotel");
+  assert.equal(sim.snapshot().readAttempts, null);
+  sim.reset(dataset);
+  assert.deepEqual(sim.snapshot().readAttempts, []);
 });
 test("HTTP simulator returns protocol errors, conflicts and fault codes", async (t) => {
   const space = sandbox(t);
@@ -137,5 +158,61 @@ test("HTTP simulator returns protocol errors, conflicts and fault codes", async 
     assert.equal((await app.inject({ method: "POST", url: "/effects", payload: { ...request, caseId: "different" } })).statusCode, 409);
     assert.equal((await app.inject("/resources/unit/unsupported")).statusCode, 400);
     assert.equal((await app.inject({ method: "POST", url: "/reset" })).statusCode, 404);
+    assert.equal((await app.inject({ method: "POST", url: "/trusted-control", payload: {
+      kind: "decision", trustedSequence: 1, eventDigest: "0".repeat(64)
+    } })).statusCode, 404);
+    assert.equal((await app.inject({ method: "POST", url: "/effects",
+      payload: { ...request, causalSequence: 1 } })).statusCode, 400);
   } finally { await app.close(); }
+});
+test("trusted control order, replay and original effect provenance survive service reopen", (t) => {
+  const space = sandbox(t); let sim = space.keep(new Simulator(space.path));
+  const v = semanticVector(); const decision = v.oracle.decisions[0]; const effectRequest = v.snapshot.attempts[0]?.request;
+  assert.ok(decision && effectRequest && v.observation.handoff && v.observation.bookings[0] && v.observation.recovery);
+  sim.reset({ ...dataset, fixtures: v.oracle.fixtures });
+  const control = { kind: "decision", trustedSequence: decision.sequence, eventDigest: digest(decision) };
+  const grant = sim.recordTrustedControl(control); const accepted = sim.attempt(effectRequest);
+  sim.close(); sim = space.keep(new Simulator(space.path));
+  assert.deepEqual(sim.recordTrustedControl(control), grant);
+  const retry = sim.attempt(effectRequest);
+  assert.equal(retry.outcome, "duplicate"); assert.equal(retry.causalSequence, 3);
+  assert.equal(sim.snapshot().effects[0]?.causalSequence, accepted.causalSequence);
+  v.snapshot = sim.snapshot(); v.observation.attemptAudit = v.snapshot.attempts;
+  v.observation.recovery.effectAttempts = 2;
+  v.observation.handoff.context.effectId = accepted.effectId ?? "unit-missing";
+  v.observation.bookings[0].effectId = accepted.effectId ?? "unit-missing";
+  assert.equal(evaluateSemantic(v.snapshot, v.observation, v.oracle).status, "passed");
+  const cancelled = { ...structuredClone(decision), sequence: 3,
+    record: { ...structuredClone(decision.record), status: "cancelled" as const } };
+  v.oracle.decisions.push(cancelled);
+  sim.recordTrustedControl({ kind: "decision", trustedSequence: 3, eventDigest: digest(cancelled) });
+  sim.close(); sim = space.keep(new Simulator(space.path));
+  assert.deepEqual(sim.recordTrustedControl(control), grant);
+  assert.throws(() => sim.recordTrustedControl({ ...control, eventDigest: "0".repeat(64) }), /TRUSTED_CONTROL_CONFLICT/);
+  assert.equal(sim.snapshot().causalEvents?.length, 4);
+  sim.attempt(effectRequest);
+  v.snapshot = sim.snapshot(); v.observation.attemptAudit = v.snapshot.attempts;
+  v.observation.recovery.effectAttempts = 3;
+  v.observation.approvalHistory = v.oracle.decisions.map((d) => ({ sequence: d.sequence, record: d.record }));
+  const result = evaluateSemantic(v.snapshot, v.observation, v.oracle);
+  assert.equal(result.status, "disqualified");
+  assert.equal(result.rules.find((r) => r.rule === "confirmation")?.disposition, "passed");
+  assert.equal(result.rules.find((r) => r.rule === "handoff")?.disposition, "passed");
+});
+test("legacy effect rows are not assigned a fabricated causal history on reopen", (t) => {
+  const space = sandbox(t); let sim = space.keep(new Simulator(space.path)); sim.reset(dataset);
+  sim.attempt(request);
+  const control = space.keep(new DatabaseSync(space.path));
+  control.exec(`
+    DELETE FROM sim_causal_events;
+    UPDATE sim_attempts SET data=json_remove(data, '$.causalSequence');
+    UPDATE sim_effects SET data=json_remove(data, '$.causalSequence');
+  `);
+  sim.close(); sim = space.keep(new Simulator(space.path));
+  assert.equal(sim.snapshot().attempts[0]?.causalSequence, null);
+  assert.equal(sim.snapshot().effects[0]?.causalSequence, null);
+  assert.deepEqual(sim.snapshot().causalEvents, []);
+  const retry = sim.attempt(request);
+  assert.equal(retry.causalSequence, 1);
+  assert.equal(sim.snapshot().effects[0]?.causalSequence, null);
 });
