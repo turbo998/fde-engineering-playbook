@@ -4,6 +4,8 @@ import { z } from "zod";
 import { Count, Id, IdentityClaims, Money, Resource, Timestamp } from "../../contracts/src/index.js";
 import { Oracle } from "./evaluator.js";
 import { Fault } from "./dataset.js";
+import { digest } from "./encoding.js";
+import { PrivateSemanticCompanion } from "./semantic-episode-schema.js";
 
 const Text = z.string().min(1);
 export const PrivateCase = z.strictObject({
@@ -127,4 +129,103 @@ export function validatePrivateFile(path: string, expectedHash?: string) {
     throw error;
   }
   return { ...validatePrivateBundle(input), hash };
+}
+
+export function semanticCompanionSchemaDigest() {
+  return digest(z.toJSONSchema(PrivateSemanticCompanion));
+}
+
+export function validateSemanticCompanion(sourceInput: unknown, companionInput: unknown, sourceSHA256: string) {
+  const source = PrivateBundle.safeParse(sourceInput);
+  const parsed = PrivateSemanticCompanion.safeParse(companionInput);
+  if (!source.success || !parsed.success) return {
+    errorCodes: ["COMPANION_SCHEMA_INVALID"], counts: { executedEpisodes: 0 }
+  };
+  if (validatePrivateBundle(source.data).errorCodes.length) return {
+    errorCodes: ["COMPANION_SOURCE_INVALID"], counts: { executedEpisodes: 0 }
+  };
+  const companion = parsed.data;
+  const errors = new Set<string>();
+  if (companion.sourceSHA256 !== sourceSHA256) errors.add("COMPANION_SOURCE_HASH_MISMATCH");
+  if (companion.schemaDigest !== semanticCompanionSchemaDigest()) errors.add("COMPANION_SCHEMA_DIGEST_MISMATCH");
+  const coverage = {
+    "implemented-machine-rule": 0, "prepared-unexecuted-integration": 0,
+    "rubric-required": 0, unsupported: 0
+  };
+  let sourceSteps = 0;
+  let typedSteps = 0;
+  let assertions = 0;
+  for (const entry of companion.cases) {
+    const original = source.data.cases.find((c) => c.id === entry.script.id);
+    if (!original) { errors.add("COMPANION_CASE_MISMATCH"); continue; }
+    const script = entry.script;
+    if (script.oracle.tenantId !== original.oracle.tenantId || script.oracle.caseId !== original.caseId ||
+        digest(script.oracle.allowedStatuses) !== digest(original.oracle.allowedStatuses) ||
+        digest(script.oracle.requiredEffectKeys) !== digest(original.oracle.requiredEffectKeys) ||
+        digest(script.oracle.requiredBookingTargets) !== digest(original.oracle.requiredBookingTargets)) {
+      errors.add("COMPANION_ORACLE_SCOPE_MISMATCH");
+    }
+    const expectedResources = source.data.resources.filter((r) =>
+      r.data.tenantId === original.oracle.tenantId && !original.omitResourceIds.includes(r.data.id));
+    if (digest(script.dataset.fixtures.map((f) => f.resource)) !== digest(expectedResources) ||
+        digest(script.oracle.fixtures) !== digest(script.dataset.fixtures) ||
+        digest(script.dataset.faults) !== digest(original.faults) ||
+        script.dataset.clock !== source.data.clock || script.dataset.policyVersion !== source.data.policyVersion ||
+        digest(script.oracle.actors) !== digest(source.data.actors)) errors.add("COMPANION_TRUST_INPUT_MISMATCH");
+    if (digest(script.oracle.policy) !== digest({
+      arrivalWindowHours: source.data.policy.arrivalWindowHours,
+      supplierLookbackDays: source.data.policy.supplierLookbackDays,
+      maximumDistanceMetres: source.data.policy.maximumDistanceMetres,
+      requiredClass: source.data.policy.requiredClass,
+      requiredRoomCategory: source.data.policy.requiredRoomCategory,
+      requiredOccupancy: source.data.policy.requiredOccupancy
+    })) errors.add("COMPANION_POLICY_MISMATCH");
+    if (script.sourceStepMappings.length !== original.episode.length ||
+        script.sourceStepMappings.some((m) => digest(original.episode[m.sourceIndex]) !== m.sourceDigest) ||
+        entry.assertions.length !== original.additionalAssertions.length ||
+        entry.assertions.some((a) => digest(original.additionalAssertions[a.sourceIndex]) !== a.sourceDigest)) {
+      errors.add("COMPANION_SOURCE_MAPPING_MISMATCH");
+    }
+    sourceSteps += script.sourceStepMappings.length;
+    typedSteps += script.steps.length;
+    assertions += entry.assertions.length;
+    for (const assertion of entry.assertions) coverage[assertion.category]++;
+  }
+  return {
+    errorCodes: [...errors].sort(),
+    counts: { cases: companion.cases.length, sourceSteps, typedSteps, assertions, executedEpisodes: 0 },
+    coverage,
+    sourceSHA256: companion.sourceSHA256, schemaDigest: companion.schemaDigest,
+    companionDigest: digest(companion), scriptDigests: companion.cases.map((c) => c.scriptDigest)
+  };
+}
+
+export function validateSemanticCompanionFiles(sourcePath: string, companionPath: string, expectedSourceHash: string) {
+  const read = (path: string) => {
+    let bytes: Buffer;
+    try {
+      const info = statSync(path);
+      if (!info.isFile() || info.size > 8 * 1024 * 1024) return { error: "PREPARATION_FILE_LIMIT" } as const;
+      bytes = readFileSync(path);
+    } catch (error) {
+      if (error instanceof Error && "code" in error) return { error: "PREPARATION_READ_FAILED" } as const;
+      throw error;
+    }
+    try {
+      return { input: JSON.parse(bytes.toString("utf8")) as unknown,
+        hash: createHash("sha256").update(bytes).digest("hex") };
+    } catch (error) {
+      if (error instanceof SyntaxError) return { error: "PREPARATION_JSON_INVALID" } as const;
+      throw error;
+    }
+  };
+  const source = read(sourcePath);
+  const companion = read(companionPath);
+  if ("error" in source || "error" in companion) return {
+    counts: { executedEpisodes: 0 }, errorCodes: ["error" in source ? source.error : companion.error]
+  };
+  if (source.hash !== expectedSourceHash) return {
+    counts: { executedEpisodes: 0 }, errorCodes: ["COMPANION_SOURCE_HASH_MISMATCH"]
+  };
+  return { ...validateSemanticCompanion(source.input, companion.input, source.hash), companionSHA256: companion.hash };
 }

@@ -26,9 +26,15 @@ export const Attempt = z.strictObject({
   outcome: z.enum(["accepted", "duplicate", "conflict", "fault"]),
   effectId: Id.nullable(), faultCode: Fault.shape.code.nullable()
 });
+export const ReadAttempt = z.strictObject({
+  sequence: Count.positive(), at: Timestamp, tenantId: Id,
+  kind: z.enum(Resource.options.map((option) => option.shape.kind.value)),
+  outcome: z.enum(["ok", "fault"]), faultCode: Fault.shape.code.nullable()
+});
 export const Snapshot = z.strictObject({
   kind: z.literal("synthetic-service-ledger"),
   clock: Timestamp, policyVersion: Id,
   attempts: z.array(Attempt), effects: z.array(Effect),
-  reads: Count
+  reads: Count,
+  readAttempts: z.array(ReadAttempt).nullable().default(null)
 });

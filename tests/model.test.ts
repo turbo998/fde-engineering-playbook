@@ -85,3 +85,26 @@ test("empty response, wrong model and output overrun fail explicitly", async () 
 test("cleanup errors cannot produce successful responses", async () => {
   await assert.rejects(exerciseOfflineSdkProtocol(request, offlineDouble({ cleanupFail: true }).double), AggregateError);
 });
+for (const failure of ["timeout", "rate-limit", "malformed"] as const) {
+  test(`offline ${failure} failure is explicit and bounded to one SDK send with no fallback`, async () => {
+    const { double, calls } = offlineDouble();
+    const create = double.createSession;
+    double.createSession = async (config) => {
+      const session = await create(config);
+      if (failure === "malformed") {
+        const send = session.send;
+        session.send = async (prompt, timeout) => { await send(prompt, timeout); return ""; };
+      } else {
+        const send = session.send;
+        session.send = async (prompt, timeout) => {
+          await send(prompt, timeout);
+          throw new Error(failure === "timeout" ? "UNIT_TIMEOUT" : "UNIT_RATE_LIMIT");
+        };
+      }
+      return session;
+    };
+    await assert.rejects(exerciseOfflineSdkProtocol(request, double), AggregateError);
+    assert.equal(calls.filter((call) => call === "send").length, 1);
+    assert.deepEqual(calls, ["create", "send", "abort", "unsubscribe", "disconnect", "stop"]);
+  });
+}

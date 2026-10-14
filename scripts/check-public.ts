@@ -6,7 +6,8 @@ const files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclud
   .split("\0").filter(Boolean);
 const rootFiles = new Set([
   "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md", ".gitignore", ".gitattributes",
-  ".npmrc", "package.json", "package-lock.json", "tsconfig.json", "tsconfig.build.json", "eslint.config.js"
+  ".npmrc", "package.json", "package-lock.json", "tsconfig.json", "tsconfig.build.json", "eslint.config.js",
+  ".github/CONTRIBUTING.md", ".github/SECURITY.md", ".github/dependabot.yml"
 ]);
 const errors: string[] = [];
 for (const file of files) {

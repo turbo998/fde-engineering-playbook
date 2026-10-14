@@ -115,6 +115,10 @@ test("read failures are explicit; retry counts and clock are durable", (t) => {
   sim = space.keep(new Simulator(space.path));
   assert.equal(sim.read("unit", "hotel").status, "ok");
   assert.equal(sim.snapshot().reads, 2);
+  assert.deepEqual(sim.snapshot().readAttempts, [
+    { sequence: 1, at: clock, tenantId: "unit", kind: "hotel", outcome: "fault", faultCode: "retrieval_failure" },
+    { sequence: 2, at: "2000-01-01T00:01:00.000Z", tenantId: "unit", kind: "hotel", outcome: "ok", faultCode: null }
+  ]);
   assert.equal(sim.snapshot().clock, "2000-01-01T00:01:00.000Z");
 });
 test("duplicate faults and malformed reset fail without destroying existing state", (t) => {
@@ -125,6 +129,18 @@ test("duplicate faults and malformed reset fail without destroying existing stat
   const fault = { operation: "read", call: 1, code: "retrieval_failure" };
   assert.throws(() => sim.reset({ ...dataset, faults: [fault, fault] }));
   assert.equal(sim.snapshot().effects.length, 1);
+});
+test("legacy read counts remain explicitly unavailable until a clean reset, never invented as zero", (t) => {
+  const space = sandbox(t);
+  const sim = space.keep(new Simulator(space.path)); sim.reset(dataset);
+  const control = space.keep(new DatabaseSync(space.path));
+  control.exec("UPDATE sim_meta SET reads=2");
+  assert.equal(sim.snapshot().reads, 2);
+  assert.equal(sim.snapshot().readAttempts, null);
+  sim.read("unit", "hotel");
+  assert.equal(sim.snapshot().readAttempts, null);
+  sim.reset(dataset);
+  assert.deepEqual(sim.snapshot().readAttempts, []);
 });
 test("HTTP simulator returns protocol errors, conflicts and fault codes", async (t) => {
   const space = sandbox(t);

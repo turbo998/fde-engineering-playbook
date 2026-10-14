@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { Count, EffectRequest, Id, Resource, Timestamp } from "../../contracts/src/index.js";
 import { canonicalJson, digest } from "./encoding.js";
-import { Attempt, Dataset, Effect, Fault, Fixture, Snapshot } from "./dataset.js";
+import { Attempt, Dataset, Effect, Fault, Fixture, ReadAttempt, Snapshot } from "./dataset.js";
 export { Attempt, Dataset, Effect, Fault, Fixture, Snapshot } from "./dataset.js";
 
 export type Attempt = z.infer<typeof Attempt>;
@@ -23,6 +23,7 @@ export class Simulator {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS sim_meta (id INTEGER PRIMARY KEY CHECK(id=1), data TEXT NOT NULL, reads INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS sim_attempts (sequence INTEGER PRIMARY KEY, data TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS sim_reads (sequence INTEGER PRIMARY KEY, data TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS sim_effects (id TEXT PRIMARY KEY, tenant TEXT NOT NULL, key TEXT NOT NULL, hash TEXT NOT NULL, data TEXT NOT NULL, UNIQUE(tenant, key));
     `);
   }
@@ -32,7 +33,7 @@ export class Simulator {
   reset(input: unknown): void {
     const data = Dataset.parse(input);
     this.transaction(() => {
-      this.db.exec("DELETE FROM sim_attempts; DELETE FROM sim_effects; DELETE FROM sim_meta");
+      this.db.exec("DELETE FROM sim_attempts; DELETE FROM sim_effects; DELETE FROM sim_reads; DELETE FROM sim_meta");
       this.db.prepare("INSERT INTO sim_meta VALUES (1, ?, 0)").run(canonicalJson(data));
     });
   }
@@ -59,6 +60,11 @@ export class Simulator {
       this.db.exec("UPDATE sim_meta SET reads=reads+1 WHERE id=1");
       const call = Count.parse(this.db.prepare("SELECT reads FROM sim_meta WHERE id=1").get()?.reads);
       const fault = data.faults.find((item) => item.operation === "read" && item.call === call);
+      const attempt = ReadAttempt.parse({
+        sequence: call, at: data.clock, tenantId, kind,
+        outcome: fault ? "fault" : "ok", faultCode: fault?.code ?? null
+      });
+      this.db.prepare("INSERT INTO sim_reads VALUES (?, ?)").run(call, canonicalJson(attempt));
       if (fault) return { status: "fault", code: fault.code };
       return { status: "ok", fixtures: data.fixtures.filter((item) =>
         item.resource.kind === kind && item.resource.data.tenantId === tenantId) };
@@ -101,9 +107,12 @@ export class Simulator {
   snapshot(): Snapshot {
     return this.transaction(() => {
       const data = this.dataset();
+      const reads = Count.parse(this.db.prepare("SELECT reads FROM sim_meta WHERE id=1").get()?.reads);
+      const readAttempts = this.db.prepare("SELECT data FROM sim_reads ORDER BY sequence").all()
+        .map((row) => ReadAttempt.parse(storedJson(row.data)));
       return Snapshot.parse({
         kind: "synthetic-service-ledger", clock: data.clock, policyVersion: data.policyVersion,
-        reads: this.db.prepare("SELECT reads FROM sim_meta WHERE id=1").get()?.reads,
+        reads, readAttempts: readAttempts.length === reads ? readAttempts : null,
         attempts: this.db.prepare("SELECT data FROM sim_attempts ORDER BY sequence").all()
           .map((row) => storedJson(row.data)),
         effects: this.db.prepare("SELECT data FROM sim_effects ORDER BY rowid").all()
