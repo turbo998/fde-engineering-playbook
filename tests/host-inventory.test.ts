@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { HostInventoryReceipt, HostInventoryTarget, runHostInventory, type InventoryProcess } from "../packages/lab/src/host-inventory.js";
 import { sandbox } from "./helpers.js";
@@ -172,14 +172,21 @@ test("cleanup refuses a substituted fixture-root link and never deletes its targ
   assert.ok(existsSync(marker)); assert.equal(readFileSync(marker, "utf8"), "retain");
   assert.ok(link); rmSync(link);
 });
-test("settings redirected through a directory link are neither read nor overwritten by the diagnostic", (t) => {
+test("substituted home is rejected before any subsequent child or configuration mutation", (t) => {
   const pinned = target(t); const outside = join(pinned.packageDirectory, "outside-settings");
   const outsideSkill = join(outside, "skills", "fde-personal-canary");
   mkdirSync(outsideSkill, { recursive: true }); writeFileSync(join(outsideSkill, "SKILL.md"), "retain");
   const settings = join(outside, "settings.json");
   const original = JSON.stringify({ disabledSkills: ["fde-personal-canary"] });
   writeFileSync(settings, original);
+  let substituted = false; let callsAfterSubstitution = 0;
+  const commands: string[][] = [];
   const receipt = runHostInventory(pinned, { process: (invocation) => {
+    commands.push(invocation.args.slice(5));
+    if (substituted) {
+      callsAfterSubstitution++;
+      return { status: 1, stdout: "", failure: null };
+    }
     const result = spawnSync(invocation.executable, invocation.args, {
       cwd: invocation.cwd, env: invocation.env, encoding: "utf8", timeout: invocation.timeoutMs,
       maxBuffer: invocation.maxOutputBytes
@@ -187,12 +194,67 @@ test("settings redirected through a directory link are neither read nor overwrit
     if (invocation.args.includes("disable")) {
       const home = invocation.env.COPILOT_HOME; assert.ok(home);
       renameSync(home, `${home}-original`); symlinkSync(outside, home, process.platform === "win32" ? "junction" : "dir");
+      substituted = true;
     }
     return { status: result.status, stdout: result.stdout ?? "", failure: result.error ? "process" : null };
   } });
-  assert.deepEqual(receipt.errorCodes, ["TEMPORARY_SETTINGS_INVALID"]); assert.equal(receipt.cleanup, "removed");
+  assert.equal(callsAfterSubstitution, 0);
+  assert.deepEqual(commands.at(-1), ["skill", "disable", "fde-personal-canary"]);
+  assert.deepEqual(receipt.errorCodes, ["FIXTURE_SCOPE_INVALID"]); assert.equal(receipt.cleanup, "removed");
   assert.equal(readFileSync(settings, "utf8"), original);
 });
+for (const directory of ["cwd", "HOME", "USERPROFILE", "COPILOT_HOME", "APPDATA", "LOCALAPPDATA",
+  "TEMP", "TMP", "XDG_CONFIG_HOME", "XDG_CACHE_HOME"] as const) {
+  for (const beforeMutation of [false, true]) {
+    test(`substituted ${directory} blocks the next ${beforeMutation ? "fixture mutation" : "child invocation"}`, (t) => {
+      const pinned = target(t); const outside = join(pinned.packageDirectory, "outside-redirect");
+      mkdirSync(outside); writeFileSync(join(outside, "marker"), "retain");
+      let substituted = false; let subsequentCalls = 0;
+      const receipt = runHostInventory(pinned, { process: (invocation) => {
+        if (substituted) {
+          subsequentCalls++;
+          return { status: 1, stdout: "", failure: null };
+        }
+        const result = spawnSync(invocation.executable, invocation.args, {
+          cwd: invocation.cwd, env: invocation.env, encoding: "utf8", timeout: invocation.timeoutMs,
+          maxBuffer: invocation.maxOutputBytes
+        });
+        if (beforeMutation ? invocation.args.includes("mcp") : invocation.args.includes("--version")) {
+          const redirected = directory === "cwd" ? invocation.cwd : invocation.env[directory];
+          assert.ok(redirected);
+          renameSync(redirected, `${redirected}-original`);
+          symlinkSync(outside, redirected, process.platform === "win32" ? "junction" : "dir");
+          substituted = true;
+        }
+        return { status: result.status, stdout: result.stdout ?? "", failure: result.error ? "process" : null };
+      } });
+      assert.equal(substituted, true); assert.equal(subsequentCalls, 0);
+      assert.deepEqual(receipt.errorCodes, ["FIXTURE_SCOPE_INVALID"]);
+      assert.equal(receipt.cleanup, "removed"); assertOwnedCleanup(pinned);
+      assert.deepEqual(readdirSync(outside), ["marker"]);
+      assert.equal(readFileSync(join(outside, "marker"), "utf8"), "retain");
+      assert.ok(!JSON.stringify(receipt).includes(outside));
+    });
+  }
+}
+for (const nested of [false, true]) {
+  test(`linked ${nested ? "cwd parent" : "cwd"} is rejected before creating disposable directories`, (t) => {
+    const pinned = target(t); const physical = join(pinned.packageDirectory, "physical-workspace");
+    mkdirSync(physical); if (nested) mkdirSync(join(physical, "workspace"));
+    const linked = join(pinned.packageDirectory, "linked-workspace");
+    symlinkSync(physical, linked, process.platform === "win32" ? "junction" : "dir");
+    const cwd = nested ? join(linked, "workspace") : linked;
+    const physicalLocal = join(physical, ...(nested ? ["workspace"] : []), ".local");
+    t.mock.method(process, "cwd", () => cwd);
+    let calls = 0;
+    const receipt = runHostInventory(pinned, { process: () => {
+      calls++; throw new Error("PRIVATE_CANARY");
+    } });
+    assert.equal(existsSync(physicalLocal), false);
+    assert.equal(calls, 0); assert.deepEqual(receipt.errorCodes, ["FIXTURE_SCOPE_INVALID"]);
+    assert.equal(receipt.cleanup, "not-created");
+  });
+}
 test("diagnostic CLI requires opt-in and emits only a validated sanitized receipt", (t) => {
   const pinned = target(t); const path = join(pinned.packageDirectory, "target.json");
   writeFileSync(path, JSON.stringify(pinned));

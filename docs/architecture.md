@@ -40,6 +40,8 @@
 
 无推理库存诊断使用调用者提供的私有身份 pin，不解析 npm shim，不自动更新/安装或改变系统信任。只支持明确的 CLI 1.0.95-3 格式：Node、`index.js`、package、`cli-main.js` 和当前平台 runtime 文件 hash 在开始/结束核验；这不是签名认证或对并发文件替换的完整防护。子环境仅保留必要系统变量，把 profile/AppData/temp/config/cache 重定向到该 episode 的 disposable 根，启用 offline/no-update/no-remote/no-export/disabled-builtin-MCP 标志。单进程输出/超时与整体 CLI 时间有界；不提供任意命令或模型入口。
 
+路径 guard 在首次目录创建前核验 cwd/local 的全部祖先，并在每次子进程及 fixture/config 创建或写入前重新核验 owned root、cwd、home/AppData/temp/XDG config/cache。链接替换导致静态 `FIXTURE_SCOPE_INVALID`，不会先启动下一个子进程；cleanup 只在根及其祖先仍有效时删除自己的 fixture，内部链接不被跟随。此设计修复确定性的调用间 scope 缺口，不替代原子文件系统 capability 或 OS 沙箱。
+
 skill 的来源计数采用固定枚举 map，未知来源/字段/缺失 enabled/重名拒绝。instruction 列表只计发现数，不能从 `defaultDisabled` 推出实际 enabled；非空 plugin/MCP 当前 unavailable。官方 canary disable 的临时 `settings.json.disabledSkills` 必须严格匹配，再仅在临时 home 禁用已发现非 builtin；baseline 校验原 builtin 集合完整，treatment 校验相同 builtin 加唯一指定 project canary及其临时路径。所有动态名称、路径、描述仅内部比较/hash，不进入 receipt。配置路径与清理目标拒绝链接替换；失败/timeout 仍清理自身根，目标不明确则报错，不删除外部目标。
 
 库存 receipt 的 verified 只限这一集合观察：不包括 host 投影 instructions、hooks/memory、方法 activation、OS/文件/网络/cross-arm/holdout 分离。历史 native 平台 detector 的 true 也不是运行 canary；本工具不调用这个内部版本绑定 API，字段保持 `null`。它不读私有 goldens、不填写 manifest 的模型/预算/批准，也不分发给编码组或进入 seed。

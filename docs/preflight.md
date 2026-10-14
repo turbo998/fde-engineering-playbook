@@ -29,6 +29,8 @@
 
 `host:inventory -- --inventory-only` 要求私有 pin 输入，固定支持 1.0.95-3，不自动探测 PATH/npm shim。只允许 list/version/temporary canary disable，严格已知 JSON、静态来源 map、1 MiB 输出、30 秒单进程/90 秒整体 CLI 截止；未知返回 unavailable/null，不读取 goldens 或模型 session。非空 plugin/MCP 等形状未支持，不能作为空集合通过。baseline/treatment exclusivity 仅指库存集合；未授权真实方法处理或 measured arms。原生 API、TLS trust 和 SDK 公共元数据恢复不在此 bounded 增量中实现。
 
+库存路径 scope 修复在创建 `.local` 前拒绝 cwd 或任何父级链接/junction；每次子进程与 fixture/config 变更前重新核验 owned root、cwd 和所有重定向 home/config/cache/temp 目录。检测到替换后不启动下一个子进程，不继续写入；清理仅删除已核验根内的 fixture（不跟随其内部链接），替换根/父级则拒绝清理并返回静态错误。此保证针对调用之间的确定性替换，不宣称完整 hostile concurrent TOCTOU 防护或 OS 隔离。
+
 ## 方法兼容矩阵
 
 | 组/参考 | 计划宿主 | 文档/源码依据 | 本机完整链路 |

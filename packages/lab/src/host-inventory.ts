@@ -113,6 +113,14 @@ function regularFile(path: string, maximumBytes: number): Buffer {
   return readFileSync(path);
 }
 
+function guardDirectoryAncestry(path: string): void {
+  for (let current = resolve(path); ; current = dirname(current)) {
+    const stat = lstatSync(current, { throwIfNoEntry: false });
+    if (stat && (!stat.isDirectory() || stat.isSymbolicLink())) fail("FIXTURE_SCOPE_INVALID");
+    if (current === dirname(current)) break;
+  }
+}
+
 function identify(input: z.infer<typeof HostInventoryTarget>): z.infer<typeof Identity> {
   try {
     if (realpathSync(input.nodePath) !== realpathSync(process.execPath) ||
@@ -172,27 +180,47 @@ export function runHostInventory(input: unknown, options: {
     const timeout = z.number().int().min(1).max(30_000).safeParse(options.timeoutMs ?? 30_000);
     if (!timeout.success) fail("TARGET_INVALID");
     report.identity = identify(target.data);
+    guardDirectoryAncestry(resolve(process.cwd()));
+    guardDirectoryAncestry(local);
     mkdirSync(local, { recursive: true });
     if (lstatSync(local).isSymbolicLink() || realpathSync(local) !== local) fail("FIXTURE_SCOPE_INVALID");
+    guardDirectoryAncestry(local);
     fixture = mkdtempSync(join(local, "host-inventory-"));
     const home = join(fixture, "home"); const cliHome = join(home, ".copilot");
     const cwd = join(fixture, "workspace");
     const ownedRoot = fixture;
     const guardFixturePath = (path: string) => {
-      if (!path.startsWith(`${ownedRoot}${sep}`) || realpathSync(ownedRoot) !== ownedRoot) fail("FIXTURE_SCOPE_INVALID");
+      guardDirectoryAncestry(ownedRoot);
+      if (resolve(path) !== path || !path.startsWith(`${ownedRoot}${sep}`) ||
+          realpathSync(ownedRoot) !== ownedRoot) fail("FIXTURE_SCOPE_INVALID");
       for (let current = path; current !== ownedRoot; current = dirname(current)) {
         if (lstatSync(current, { throwIfNoEntry: false })?.isSymbolicLink()) fail("FIXTURE_SCOPE_INVALID");
       }
     };
+    const env = environment(home);
+    const guardManagedDirectories = (requireExisting = true) => {
+      for (const directory of [cwd, home, ...[
+        "HOME", "USERPROFILE", "COPILOT_HOME", "APPDATA", "LOCALAPPDATA", "TEMP", "TMP",
+        "XDG_CONFIG_HOME", "XDG_CACHE_HOME"
+      ].map((key) => env[key])]) {
+        if (typeof directory !== "string") fail("FIXTURE_SCOPE_INVALID");
+        guardFixturePath(directory);
+        const stat = lstatSync(directory, { throwIfNoEntry: false });
+        if (stat ? !stat.isDirectory() : requireExisting) fail("FIXTURE_SCOPE_INVALID");
+      }
+    };
     const writeFixture = (path: string, text: string) => {
+      guardManagedDirectories();
       guardFixturePath(path); writeFileSync(path, text);
     };
     for (const directory of [cliHome, cwd, ...["appdata", "localappdata", "temp", "config", "cache"].map((p) => join(home, p))]) {
+      guardManagedDirectories(false);
+      guardFixturePath(directory);
       mkdirSync(directory, { recursive: true });
     }
-    const env = environment(home);
     const deadline = Date.now() + 90_000;
     const invoke = (args: string[]) => {
+      guardManagedDirectories();
       const remaining = deadline - Date.now();
       if (remaining <= 0) fail("CLI_PROCESS_TIMEOUT");
       const result = ProcessResult.safeParse((options.process ?? execute)({
@@ -255,6 +283,7 @@ export function runHostInventory(input: unknown, options: {
     inventory("clean", "plugin"); inventory("clean", "mcp");
     const cleanBuiltin = enabledSet(clean.filter((entry) => entry.source === "builtin"));
     const personalDir = join(cliHome, "skills", personal);
+    guardManagedDirectories();
     guardFixturePath(personalDir);
     mkdirSync(personalDir, { recursive: true });
     writeFixture(join(personalDir, "SKILL.md"),
@@ -286,6 +315,7 @@ export function runHostInventory(input: unknown, options: {
     if (baselineEnabled.length === 0 || baselineEnabled.some((entry) => entry.source !== "builtin") ||
         digest(enabledSet(baseline)) !== digest(cleanBuiltin)) fail("BASELINE_NOT_EXCLUSIVE");
     const treatmentDir = join(cwd, ".github", "skills", treatment);
+    guardManagedDirectories();
     guardFixturePath(treatmentDir);
     mkdirSync(treatmentDir, { recursive: true });
     writeFixture(join(treatmentDir, "SKILL.md"),
@@ -311,6 +341,7 @@ export function runHostInventory(input: unknown, options: {
   } finally {
     if (fixture !== null) {
       try {
+        guardDirectoryAncestry(fixture);
         if (dirname(fixture) !== local || !basename(fixture).startsWith("host-inventory-") ||
             lstatSync(fixture).isSymbolicLink() || realpathSync(fixture) !== fixture) fail("FIXTURE_SCOPE_INVALID");
         rmSync(fixture, { recursive: true });
