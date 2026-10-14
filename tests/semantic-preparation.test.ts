@@ -42,7 +42,7 @@ function preparations() {
     const observation = { ...v.observation, caseId: original.caseId, bookings: [], handoff: null,
       audit: [], approvalHistory: [], attemptAudit: [] };
     const script = TypedSemanticEpisode.parse({
-      schemaVersion: 2, kind: "private-typed-semantic-preparation", executionStatus: "not-run", id: original.id,
+      schemaVersion: 3, kind: "private-typed-semantic-preparation", executionStatus: "not-run", id: original.id,
       dataset: { clock, policyVersion: oracle.policyVersion, fixtures: oracle.fixtures, faults: [] },
       steps: [{ kind: "observe", expected: observation }], oracle,
       sourceStepMappings: [{
@@ -58,7 +58,7 @@ function preparations() {
     };
   });
   const companion = PrivateSemanticCompanion.parse({
-    schemaVersion: 2, kind: "private-semantic-companion", executionStatus: "not-run",
+    schemaVersion: 3, kind: "private-semantic-companion", executionStatus: "not-run",
     sourceSHA256: sourceHash, schemaDigest: semanticCompanionSchemaDigest(), implementationCommit: "0".repeat(40),
     cases: entries
   });

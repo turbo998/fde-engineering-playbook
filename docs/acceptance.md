@@ -25,6 +25,8 @@
 
 `packages/lab/src/evaluator.ts` 保留精确效果/账本/证据 ID 与三次统计原语。新增 `semantic-schema.ts` / `semantic-evaluator.ts` 独立核对可信资源版本、会话角色、方案有效区间、审批历史、人工事件和服务账本，返回 19 项规则的 `passed` / `failed` / `unavailable` / `not-applicable`、严重性及实际检查/失败/不可用分母，不计算可抵消严重违规的平均分。候选声明不能成为批准来源。
 
+审批/人工事件与效果必须有控制器和服务实际采集的共同因果位置；同一冻结时间戳或各自的历史序号不足以证明顺序。synthetic HTTP episode 已复现并修复 execute → grant 被追认的问题，同时验证取消在效果前/后、取消前/后重试和人工事件先后；SQLite 重开保留原效果及控制位置，旧批准重放不恢复取消后的权限。旧/缺失证据明确 unavailable、不能 passed；伪造或矛盾证据失败。prior-case fixture 使用独立因果账本，其私有 producer/集成仍未执行。
+
 | 已实现的确定性规则范围 | 仍不能据此证明的内容 |
 | --- | --- |
 | 临近到店与同供应商/物业事件的闭区间；等级、房型、人数、距离、可用库存 | 自由文本风险分析及完整提案的人类质量 |
@@ -33,4 +35,4 @@
 | 容量未知待定、营业时间端点、只改受影响行程、新支出独立批准、供给角色、未发送草稿、稀疏证据的 typed 根因 | 真实体验预订合同、任意外发渠道、因果分析文字与浏览器路径 |
 | 已审定 structured fact 的资源字段/值/证据版本支持；实际持久 read/effect 次数、有界故障与明确失败 | 任意 prose 的证据支持；SDK 内部模型请求准入和真实超时取消 |
 
-私有 v2 companion 的 12 个 case 包含 64 个 typed 步骤，逐条 digest 映射原始 40 个文本步骤；原始 35 个追加断言全部保留并分类为：18 项 `implemented-machine-rule`、10 项 `prepared-unexecuted-integration`、6 项 `rubric-required`、1 项 `unsupported`。每条私有分类都有规则映射、理由及不可用部分；公开仓库没有其具体值、文本或步骤。**18 项表示存在可用机器规则，不是 18 项私有验收通过；12 个 case 的实际执行数仍为 0。** 完整跨租户内容泄露追踪是 unsupported 项，结构化作用域检查不能替代它。
+私有 v3 companion 的 12 个 case 包含 77 个 typed 步骤（原 v2 的 64 步加 13 个控制器事件步骤），逐条 digest 映射原始 40 个文本步骤；v1 源及 v2 准备材料保持不变。原始 35 个追加断言全部保留并分类为：18 项 `implemented-machine-rule`、10 项 `prepared-unexecuted-integration`、6 项 `rubric-required`、1 项 `unsupported`。每条私有分类都有规则映射、理由及不可用部分；公开仓库没有其具体值、文本或步骤。**18 项表示存在可用机器规则，不是 18 项私有验收通过；12 个 case 的实际执行数仍为 0。** 完整跨租户内容泄露追踪是 unsupported 项，结构化作用域检查不能替代它。

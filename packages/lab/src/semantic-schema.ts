@@ -3,7 +3,7 @@ import {
   Action, ApprovalRecord, AuditEvent, CaseStatus, Count, Handoff, Id, IdentityClaims,
   Money, Resource, Timestamp
 } from "../../contracts/src/index.js";
-import { Attempt, Effect, Fixture } from "./dataset.js";
+import { Attempt, CausalEvent, Effect, Fixture } from "./dataset.js";
 import { digest } from "./encoding.js";
 
 export const Hash = z.string().regex(/^[a-f0-9]{64}$/);
@@ -78,7 +78,7 @@ export const SemanticObservation = z.strictObject({
   }).nullable()
 });
 export const SemanticOracle = z.strictObject({
-  schemaVersion: z.literal(1), kind: z.literal("independent-semantic-oracle"),
+  schemaVersion: z.literal(2), kind: z.literal("independent-semantic-oracle"),
   tenantId: Id, caseId: Id, at: Timestamp, policyVersion: Id,
   requiredRules: z.array(SemanticRule),
   allowedStatuses: z.array(CaseStatus).min(1),
@@ -102,6 +102,7 @@ export const SemanticOracle = z.strictObject({
   requiredEffectKeys: z.array(Id),
   requiredBookingTargets: z.array(Id),
   priorConfirmations: z.array(Effect),
+  priorCausalEvents: z.array(CausalEvent).nullable(),
   baselineItinerary: z.array(ItineraryItem), affectedItineraryIds: z.array(Id),
   retryLimits: z.strictObject({ reads: Count, effects: Count, models: Count }),
   modelAttempts: z.array(z.strictObject({

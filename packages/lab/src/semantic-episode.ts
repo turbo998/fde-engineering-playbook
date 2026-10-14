@@ -32,7 +32,15 @@ export async function runOfflineSemanticEpisode(input: unknown, adapter: Semanti
   let stepsCompleted = 0;
   for (const step of script.steps) {
     if (step.kind === "restart") await adapter.restart();
-    else if (step.kind === "advance-clock") simulator.advanceTo(step.at);
+    else if (step.kind === "trusted-control") {
+      const event = (step.eventKind === "decision" ? script.oracle.decisions : script.oracle.manualEvents)
+        .find((e) => e.sequence === step.trustedSequence);
+      if (!event) throw new Error("TRUSTED_CONTROL_REFERENCE_INVALID");
+      const captured = simulator.recordTrustedControl({
+        kind: step.eventKind, trustedSequence: step.trustedSequence, eventDigest: digest(event)
+      });
+      if (Date.parse(captured.at) !== Date.parse(event.at)) throw new Error("TRUSTED_CONTROL_CLOCK_MISMATCH");
+    } else if (step.kind === "advance-clock") simulator.advanceTo(step.at);
     else if (step.kind === "observe") {
       if (digest(SemanticObservation.parse(await adapter.observeSemantic())) !== digest(step.expected)) {
         throw new Error("SEMANTIC_CHECKPOINT_MISMATCH");

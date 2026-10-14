@@ -15,7 +15,7 @@
 | Bun / Claude CLI / Docker | 未就绪 | 既有预检未发现；本阶段未全局安装，不靠它们运行离线底座 |
 | OS/跨组隔离 | 未验证，有具体污染线索 | 干净 home/白名单环境仍发现 36 inherited + 2 builtin skills；个人 skill canary 增至 39，`--no-custom-instructions` 未排除它。发现不等于激活，仍不能证明隔离 |
 | seed-only 制品边界 | 已离线验证 | 固定 allowlist、链接/穿越拒绝、可信 hash、合成污染 canary、导出副本独立安装/构建/启动；不是 OS 隔离 |
-| 私有准备 schema/引用/分类 | v1 保留，v2 已离线准备 | 12 cases / 40 源步骤 / 64 typed 步骤 / 35 全量分类；18 机器规则、10 未执行集成、6 rubric、1 unsupported；0 私有执行 |
+| 私有准备 schema/引用/分类 | v1/v2 保留，v3 已离线准备 | 12 cases / 40 源步骤 / 77 typed 步骤（含 13 控制事件）/ 35 全量分类；18 机器规则、10 未执行集成、6 rubric、1 unsupported；0 私有执行 |
 | 独立 typed 语义 oracle | 合成确定性测试已覆盖 | 19 规则、角色/版本/批准/手工事件/账本/边界/恢复；不证明自由文本、真实身份、浏览器或完整私有候选通过 |
 | 通用 episode 驱动 | 已离线验证 | 仅 loopback HTTP 测试双，事件/审批/重启/故障/独立 oracle；候选执行仍禁用 |
 | 精确模型与额度批准 | 缺失 | manifest 的模型/限额/approval 保持未填写 |

@@ -12,7 +12,7 @@
 | 外部评测与额度 | partial | 原语 + 19 项独立 typed 语义规则、三次统计及持久准入；不是完整自然语言/UI 业务验收或 SDK 内部计费控制 |
 | 通用 episode 驱动/适配契约 | completed（离线协议） | known-good/bad HTTP 子进程、事件/审批/重启/故障/独立 oracle；非候选应用，无模型 |
 | seed-only 导出/核验 | completed（制品边界） | 20 文件 + manifest、精简锁、可信 hash、穿越/链接拒绝、污染 canary；不等于 OS 沙箱 |
-| 私有准备材料与 v2 companion | completed（离线准备） | v1 不变；12 cases、40 源步骤映射 64 typed 步骤、35 全量分类；0 已执行 episode |
+| 私有准备材料与 v3 companion | completed（离线准备） | v1/v2 不变；12 cases、40 源步骤映射 77 typed 步骤（新增 13 控制事件）、35 全量分类；0 已执行 episode |
 | 账本回归修复 | completed（离线） | 未结算 reservation 阻止新准入；snapshot 单一读事务；两项先复现再修复 |
 | Copilot SDK 适配 | partial | 固定 SDK 类型映射、明确离线测试双、错误/用量/清理处理；live 入口硬性拒绝 |
 | 账户元数据预检 | completed（无推理） | SDK 已登录及模型目录可见；Codex 只读认证状态已确认；详细目录不公开 |
@@ -21,20 +21,23 @@
 
 ## 2026-10-14 语义增量的实际验证
 
-`npm run check` passed：严格类型、lint、**141 tests / 0 failed / 0 skipped**、服务端/React build、实际 loopback 子进程 smoke、82 个公开文本文件的扫描/相对链接核验。新增 76 个测试包括 64 项语义 oracle、4 项 typed/HTTP 接线、3 项 private companion、3 项离线模型故障、1 项 read ledger 兼容回归及 1 项发布 allowlist 回归。没有执行任何私有 case 或模型调用。
+`npm run check` passed：严格类型、lint、**155 tests / 0 failed / 0 skipped**、服务端/React build、实际 loopback 子进程 smoke、82 个公开文本文件的扫描/相对链接核验。首次语义增量为 141 tests；随后因果顺序修正增加 14 tests：1 项实际 HTTP execute-before-grant 回归、8 项同钟有序 HTTP episode、3 项因果可用性/隔离/篡改检查、2 项 SQLite 重开/旧数据回归。没有执行任何私有 case 或模型调用。
 
 | 验证对象 | 实际结果与边界 |
 | --- | --- |
 | 业务边界与权限 | 499/500/501 米、等级/房型/人数/容量；72 小时与 30 天闭区间；角色/actor/租户/case/action/plan/policy/facts/cost/currency/expiry/status；零成本仍需批准；路径 B 人工事件顺序 |
 | 账本与恢复 | 非授权故障尝试、重复/孤立效果、错误 booked、审批历史/尝试审计、交接字段/版本/证据篡改、未知容量/营业端点、未受影响行程、单独支出、供给权限、未发送草稿、稀疏 typed 根因、真实 read/effect 次数与无成功 fallback |
-| 老数据库 | 有 count 无 read 历史时明确 `null`；重启保留 read 成功/故障行；WAL 单读事务与未结算额度回归仍通过 |
-| 私有 companion | 源 SHA 相符；12 cases、40 源步骤、64 typed 步骤、35 分类、0 执行；源/schema/script digests 与全部资源/身份/政策/故障映射核验无错误；本地私有 authoring script 严格 typecheck passed |
+| 因果顺序修正 | 真实 HTTP execute → grant 同钟回归修复前 1 failed（误报 passed），修复后 passed（正确 disqualified）；控制器事件与服务尝试共同序号；取消前后/重试/人工核实顺序及低引用序号的后发取消均验证；原确认不因后发取消失效 |
+| 老数据库与重开 | 有 count 无 read 历史、旧效果/尝试无因果位置均保持 `null`；重开保留 read 行、可信位置和原效果；控制事件重放幂等/冲突拒绝；旧批准不复活权限；WAL 单读事务与未结算额度回归仍通过 |
+| 私有 companion | 新 v3 源 SHA 相符；12 cases、40 源步骤、77 typed 步骤、35 分类、0 执行；schema/script/implementation hashes 刷新，全部资源/身份/政策/故障映射无错误；本地 authoring script 严格 typecheck passed；v1/v2 原文件保留 |
 | 35 项覆盖分类 | 18 `implemented-machine-rule`、10 `prepared-unexecuted-integration`、6 `rubric-required`、1 `unsupported`；18 不表示私有断言已通过 |
 | 干净 seed-only 副本 | 原 20 文件 + manifest、可信 hash verified；离线缓存安装 208 包；副本自身 typecheck/lint/build 与实际 Fastify/React/SQLite smoke passed；lab/oracle/goldens 不进入种子 |
 | 执行闸门 | preflight 仍 `manifestReady=false`；benchmark 按预期 exit 1 / `MANIFEST_REJECTED`；两条 episode 入口均在任何候选调用/reset 前拒绝；live transport 的硬性拒绝保留 |
 | main 维护内容 | 保留现有 redaction、贡献/安全政策和 Dependabot 配置；发布 allowlist 仅补入这三个既有文件，未放开整个 `.github`；回归证明其他 `.github` 制品仍拒绝 |
 
 最初完整 check 在 main 已有的三个维护文件上暴露了旧 allowlist 的漂移，本增量修复后完整 check 已通过。准备 CLI 的一次 SQLite 间接导入回归也已修复：schema 与 HTTP runner 分离，两个私有 CLI 的成功/失败测试均要求 stderr 为空，不屏蔽全局 warning。普通 SQLite 服务保留实验警告。
+
+原先仅按冻结时钟和审批历史序号授权的逻辑存在真实追认漏洞，141 tests 的历史通过不能证明它正确。当前 schema 明确升级（oracle v2、episode/companion v3），仅按实际服务因果账本核验审批/人工事件先后；缺失证据最多 partial，矛盾证据失败。控制器 marker 不是候选 claims 或 acknowledgment，未暴露为应用 HTTP 能力；prepared 的预期位置和 prior fixture 不是私有执行证明。服务重开测试真实关闭/重新打开 SQLite，语义 HTTP 的 restart 测试只调用适配器重启回调，不冒充私有应用进程重启。
 
 独立语义报告只核验 typed 合同，逐规则列出 disposition、严重性和实际检查/失败/不可用分母，严重违规直接取消资格；恒列自由文本支持、真实体验预订、生产身份、不可篡改审计、浏览器/人类质量为未证明维度。完整跨租户响应内容追踪仍 unsupported。私有 companion 留在忽略的本地目录，不进入 Git、CI、编码组或模型上下文；脚本准备不是 benchmark 成绩。远端 exact-commit CI 必须另行从提交/PR 记录确认，不由本机通过推断。
 
@@ -64,7 +67,7 @@
 
 首阶段曾修复 SDK reasoning 类型与 smoke 可选资产路径的 typecheck 失败。本增量曾修复 SQLite 方法 mock 的重载类型，以及私有 CLI 因间接导入数据库而输出实验警告的问题：共享 schema 与数据库实现分离后，私有 CLI stderr 为空。普通 SQLite 测试/服务仍保留实验性警告，没有全局屏蔽。
 
-测试数据为原创合成单元向量：`unit-*`、测试币种及测试小额限额不是已批准业务政策/实验预算；从未发送到模型。历史 65 项或当前 141 项工具测试均不能写成“12 个业务场景通过”，也不能证明生产可信身份、任意文本事实支持或浏览器用户路径已实测。本增量 evaluator 开发者获准读取私有源来另行编写 companion；不复制正文到公开文件，不解释/执行自然语言，不删除断言。
+测试数据为原创合成单元向量：`unit-*`、测试币种及测试小额限额不是已批准业务政策/实验预算；从未发送到模型。历史 65/141 项或当前 155 项工具测试均不能写成“12 个业务场景通过”，也不能证明生产可信身份、任意文本事实支持或浏览器用户路径已实测。本增量 evaluator 开发者获准读取私有源来另行编写 companion；不复制正文到公开文件，不解释/执行自然语言，不删除断言。
 
 ## 未做且不能冒充的工作
 

@@ -1,7 +1,7 @@
 import type { z } from "zod";
 import type { EffectRequest } from "../../contracts/src/index.js";
-import { Snapshot } from "./dataset.js";
-import { canonicalJson } from "./encoding.js";
+import { Snapshot, type CausalEvent, type Effect } from "./dataset.js";
+import { canonicalJson, digest } from "./encoding.js";
 import {
   resolveResource, SemanticObservation, SemanticOracle, SemanticRule,
   type EvidenceRef
@@ -41,6 +41,10 @@ export function evaluateSemantic(snapshotInput: unknown, observationInput: unkno
     entry.unavailable++;
     if (!entry.codes.includes(code)) entry.codes.push(code);
   };
+  const judge = (rule: SemanticRule, verdict: boolean | null, code: string) => {
+    if (verdict === null) missing(rule, "CAUSAL_AUTHORITY_UNAVAILABLE");
+    else check(rule, verdict, code);
+  };
   const required = (rule: SemanticRule) => oracle.requiredRules.includes(rule);
   const equal = (a: unknown, b: unknown) => canonicalJson(a) === canonicalJson(b);
   const sameSet = (a: string[], b: string[]) =>
@@ -64,17 +68,44 @@ export function evaluateSemantic(snapshotInput: unknown, observationInput: unkno
   const roleFor = (action: EffectRequest["action"]) =>
     ["supplier_commitment", "source_change", "markup_change", "supplier_message"].includes(action) ?
       "supply_manager" as const : "operations_approver" as const;
-  const decisionsAt = (approvalId: string, at: string) => oracle.decisions
-    .filter((d) => d.record.id === approvalId && Date.parse(d.at) <= Date.parse(at))
-    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || b.sequence - a.sequence)[0];
-  const authorizes = (request: EffectRequest, at: string, report: boolean) => {
+  type Ledger = z.infer<typeof CausalEvent>[] | null;
+  const controlFor = (event: { sequence: number; at: string }, kind: "decision" | "manual", ledger: Ledger) => {
+    for (const entry of ledger ?? []) {
+      if (entry.kind === kind && entry.trustedSequence === event.sequence &&
+          entry.eventDigest === digest(event) && Date.parse(entry.at) === Date.parse(event.at)) return entry;
+    }
+    return undefined;
+  };
+  const decisionsAt = (approvalId: string, at: string, causalSequence: number, ledger: Ledger) =>
+    oracle.decisions.flatMap((decision) => {
+      const control = controlFor(decision, "decision", ledger);
+      return control && decision.record.id === approvalId && control.sequence < causalSequence &&
+        Date.parse(control.at) <= Date.parse(at) ? [{ decision, control }] : [];
+    }).sort((a, b) => b.control.sequence - a.control.sequence)[0];
+  const authorizes = (request: EffectRequest, at: string, report: boolean,
+    causalSequence: number | null, ledger: Ledger): boolean | null => {
     const plan = planFor(request, at);
-    const decision = request.approvalId === null ? undefined : decisionsAt(request.approvalId, at);
+    if (causalSequence === null || ledger === null) {
+      if (report) {
+        missing("approval-binding", "CAUSAL_AUTHORITY_UNAVAILABLE");
+        if (plan?.path === "B") missing("manual-ordering", "CAUSAL_AUTHORITY_UNAVAILABLE");
+        if (request.action === "additional_spend") missing("separate-spend", "CAUSAL_AUTHORITY_UNAVAILABLE");
+        if (roleFor(request.action) === "supply_manager") missing("supply-authority", "CAUSAL_AUTHORITY_UNAVAILABLE");
+      }
+      return null;
+    }
+    const position = ledger.find((e) => e.sequence === causalSequence);
+    const positionValid = position?.kind === "effect-attempt" &&
+      position.requestDigest === digest(request) && Date.parse(position.at) === Date.parse(at);
+    if (report) check("ledger-integrity", positionValid, "EFFECT_CAUSAL_WITNESS_INVALID");
+    const witnessed = request.approvalId === null ? undefined :
+      decisionsAt(request.approvalId, at, causalSequence, ledger);
+    const decision = witnessed?.decision;
     const actor = oracle.actors.find((a) => a.sessionId === decision?.sessionRef);
     const binding = decision?.record.binding;
     const scope = request.tenantId === oracle.tenantId && (request.caseId === oracle.caseId ||
       oracle.priorConfirmations.some((e) => equal(e.request, request)));
-    const valid = scope && !!plan && plan.version === request.planVersion &&
+    const valid = positionValid && scope && !!plan && plan.version === request.planVersion &&
       plan.policyVersion === request.policyVersion && plan.policyVersion === oracle.policyVersion &&
       plan.targetId === request.targetId && equal(plan.cost, request.cost) &&
       (request.action !== "replacement_confirmation" || plan.facts.some((r) =>
@@ -101,8 +132,10 @@ export function evaluateSemantic(snapshotInput: unknown, observationInput: unkno
     let manual = true;
     if (plan?.path === "B") {
       const event = oracle.manualEvents.find((e) => e.id === decision?.record.manualVerificationEventId);
+      const manualControl = event ? controlFor(event, "manual", ledger) : undefined;
       const verifier = oracle.actors.find((a) => a.sessionId === event?.sessionRef);
-      manual = !!event && !!decision && event.sequence < decision.sequence &&
+      manual = !!event && !!decision && !!manualControl && !!witnessed &&
+        manualControl.sequence < witnessed.control.sequence &&
         Date.parse(event.at) <= Date.parse(decision.at) && Date.parse(event.at) >= Date.parse(plan.validFrom) &&
         event.tenantId === request.tenantId && event.caseId === request.caseId &&
         event.planVersion === plan.version && event.policyVersion === plan.policyVersion &&
@@ -113,6 +146,45 @@ export function evaluateSemantic(snapshotInput: unknown, observationInput: unkno
     }
     return valid && manual;
   };
+  const effectAuthority = (effect: z.infer<typeof Effect>, report = false) => {
+    const ledger = snapshot.effects.includes(effect) ? snapshot.causalEvents : oracle.priorCausalEvents;
+    if (effect.causalSequence !== null && ledger !== null) {
+      const entry = ledger.find((e) => e.sequence === effect.causalSequence);
+      const valid = entry?.kind === "effect-attempt" && entry.outcome === "accepted" &&
+        entry.effectId === effect.id && entry.requestDigest === digest(effect.request) &&
+        Date.parse(entry.at) === Date.parse(effect.at);
+      check("ledger-integrity", valid, "CONFIRMATION_CAUSAL_WITNESS_INVALID");
+      if (!valid) return false;
+    }
+    return authorizes(effect.request, effect.at, report, effect.causalSequence, ledger);
+  };
+  const validateCausalLedger = (ledger: Ledger) => {
+    if (ledger === null) return;
+    check("ledger-integrity", ledger.every((e, i) => e.sequence === i + 1 &&
+      Date.parse(e.at) <= Date.parse(oracle.at) &&
+      (i === 0 || Date.parse(e.at) >= Date.parse(ledger[i - 1]?.at ?? e.at))),
+      "CAUSAL_LEDGER_SEQUENCE_INVALID");
+    const keys = ledger.map((e) => canonicalJson(e.kind === "effect-attempt" ?
+      [e.kind, e.attemptSequence] : [e.kind, e.trustedSequence]));
+    check("ledger-integrity", new Set(keys).size === keys.length, "DUPLICATE_CAUSAL_EVENT");
+    for (const entry of ledger) {
+      if (entry.kind !== "effect-attempt") {
+        const events = entry.kind === "decision" ? oracle.decisions : oracle.manualEvents;
+        check("ledger-integrity", events.some((event) => event.sequence === entry.trustedSequence &&
+          digest(event) === entry.eventDigest && Date.parse(event.at) === Date.parse(entry.at)),
+          "TRUSTED_CONTROL_DIGEST_INVALID");
+      }
+    }
+  };
+  validateCausalLedger(snapshot.causalEvents);
+  validateCausalLedger(oracle.priorCausalEvents);
+  for (const entry of snapshot.causalEvents ?? []) {
+    if (entry.kind === "effect-attempt") check("ledger-integrity", snapshot.attempts.some((attempt) =>
+      attempt.causalSequence === entry.sequence && attempt.sequence === entry.attemptSequence &&
+      entry.requestDigest === digest(attempt.request) && entry.outcome === attempt.outcome &&
+      entry.effectId === attempt.effectId && Date.parse(entry.at) === Date.parse(attempt.at)),
+      "ORPHAN_CAUSAL_ATTEMPT");
+  }
   const equivalent = (id: string, plan?: ReturnType<typeof planFor>) => {
     const historicalRef = plan?.facts.find((r) => r.kind === "hotel" && r.id === id);
     const hotel = historicalRef ? resource(historicalRef) : current("hotel", id);
@@ -150,7 +222,14 @@ export function evaluateSemantic(snapshotInput: unknown, observationInput: unkno
     }
   } else if (required("hotel-equivalence")) missing("hotel-equivalence", "PROPOSAL_OBSERVATION_UNAVAILABLE");
   for (const attempt of snapshot.attempts) {
-    authorizes(attempt.request, attempt.at, true);
+    authorizes(attempt.request, attempt.at, true, attempt.causalSequence, snapshot.causalEvents);
+    if (attempt.causalSequence !== null && snapshot.causalEvents !== null) {
+      check("ledger-integrity", snapshot.causalEvents.some((entry) => entry.kind === "effect-attempt" &&
+        entry.sequence === attempt.causalSequence && entry.attemptSequence === attempt.sequence &&
+        entry.requestDigest === digest(attempt.request) && entry.outcome === attempt.outcome &&
+        entry.effectId === attempt.effectId && Date.parse(entry.at) === Date.parse(attempt.at)),
+        "ATTEMPT_CAUSAL_WITNESS_INVALID");
+    }
     check("scope", attempt.request.tenantId === oracle.tenantId && attempt.request.caseId === oracle.caseId, "ATTEMPT_SCOPE_MISMATCH");
     if (attempt.request.action === "replacement_confirmation") {
       check("hotel-equivalence", equivalent(attempt.request.targetId, planFor(attempt.request, attempt.at)), "NON_EQUIVALENT_ATTEMPT");
@@ -166,11 +245,12 @@ export function evaluateSemantic(snapshotInput: unknown, observationInput: unkno
   const attemptSequences = snapshot.attempts.map((a) => a.sequence);
   check("ledger-integrity", equal(attemptSequences, attemptSequences.map((_a, i) => i + 1)), "ATTEMPT_SEQUENCE_INVALID");
   for (const effect of snapshot.effects) {
-    authorizes(effect.request, effect.at, true);
+    effectAuthority(effect, true);
     const key = canonicalJson([effect.request.tenantId, effect.request.idempotencyKey]);
     check("ledger-integrity", !effectKeys.has(key) && !effectIds.has(effect.id) &&
       snapshot.attempts.some((a) => a.outcome === "accepted" && a.effectId === effect.id &&
-        equal(a.request, effect.request) && Date.parse(a.at) === Date.parse(effect.at)), "DUPLICATE_OR_UNWITNESSED_EFFECT");
+        equal(a.request, effect.request) && Date.parse(a.at) === Date.parse(effect.at) &&
+        a.causalSequence === effect.causalSequence), "DUPLICATE_OR_UNWITNESSED_EFFECT");
     effectKeys.add(key); effectIds.add(effect.id);
     if (effect.request.action === "replacement_confirmation") {
       check("confirmation", equivalent(effect.request.targetId, planFor(effect.request, effect.at)), "NON_EQUIVALENT_CONFIRMATION");
@@ -178,14 +258,14 @@ export function evaluateSemantic(snapshotInput: unknown, observationInput: unkno
     if (effect.request.action === "supplier_message") check("unsent-draft", false, "OUTBOUND_MESSAGE_EFFECT");
   }
   for (const key of oracle.requiredEffectKeys) {
-    check("confirmation", snapshot.effects.some((e) => e.request.idempotencyKey === key &&
-      authorizes(e.request, e.at, false)), "REQUIRED_EFFECT_MISSING");
+    const effect = snapshot.effects.find((e) => e.request.idempotencyKey === key);
+    judge("confirmation", effect ? effectAuthority(effect) : false, "REQUIRED_EFFECT_MISSING");
   }
   for (const booking of observation.bookings) {
     const effect = snapshot.effects.find((e) => e.id === booking.effectId &&
       e.request.targetId === booking.targetId && e.request.action === "replacement_confirmation");
-    check("confirmation", !!effect && authorizes(effect.request, effect.at, false) &&
-      equivalent(booking.targetId, effect ? planFor(effect.request, effect.at) : undefined), "FALSE_BOOKED");
+    judge("confirmation", effect && equivalent(booking.targetId, planFor(effect.request, effect.at)) ?
+      effectAuthority(effect) : false, "FALSE_BOOKED");
     check("structured-provenance", evidence(booking.evidence) &&
       booking.evidence.every((ref) => effect?.request.evidenceIds.includes(ref.id) &&
         planFor(effect.request, effect.at)?.evidence.some((approved) => equal(ref, approved))),
@@ -204,7 +284,7 @@ export function evaluateSemantic(snapshotInput: unknown, observationInput: unkno
     const plan = effect ? planFor(effect.request, effect.at) : undefined;
     const hotel = resource(handoff.hotel);
     const arrival = resource(handoff.arrival);
-    check("handoff", !!effect && authorizes(effect.request, effect.at, false) &&
+    const validContext = !!effect &&
       handoff.context.tenantId === oracle.tenantId && handoff.context.caseId === oracle.caseId &&
       effect.request.targetId === handoff.context.hotelId && hotel?.kind === "hotel" &&
       hotel.data.id === effect.request.targetId && hotel.data.address === handoff.context.address &&
@@ -218,7 +298,8 @@ export function evaluateSemantic(snapshotInput: unknown, observationInput: unkno
       handoff.evidence.some((r) => hotel.data.evidenceIds.includes(r.id)) &&
       handoff.evidence.some((r) => arrival.data.evidenceIds.includes(r.id)) &&
       handoff.evidence.every((r) => effect.request.evidenceIds.includes(r.id) ||
-        hotel.data.evidenceIds.includes(r.id) || arrival.data.evidenceIds.includes(r.id)),
+        hotel.data.evidenceIds.includes(r.id) || arrival.data.evidenceIds.includes(r.id));
+    judge("handoff", effect && validContext ? effectAuthority(effect) : false,
       "HANDOFF_NOT_FROM_ACTUAL_CONFIRMATION");
   } else if (required("handoff")) missing("handoff", "HANDOFF_OBSERVATION_UNAVAILABLE");
   if (observation.audit !== null) {

@@ -29,7 +29,7 @@ export function semanticVector() {
   };
   const anchor = { resource: hotel, field: "address", value: "Unit synthetic address", evidence };
   const oracle = SemanticOracle.parse({
-    schemaVersion: 1, kind: "independent-semantic-oracle", tenantId, caseId: request.caseId,
+    schemaVersion: 2, kind: "independent-semantic-oracle", tenantId, caseId: request.caseId,
     at: clock, policyVersion: request.policyVersion,
     requiredRules: ["scope", "terminal-status", "arrival-window", "supplier-window", "hotel-equivalence",
       "approval-binding", "ledger-integrity", "audit-persistence", "confirmation", "handoff",
@@ -85,7 +85,7 @@ export function semanticVector() {
     manualEvents: [], requiredAudit: [audit], supplierId: "unit-supplier", originalHotelId: "unit-original",
     risk: "risk", rootCause: "undetermined", factAnchors: [anchor],
     requiredEffectKeys: [request.idempotencyKey], requiredBookingTargets: [request.targetId],
-    priorConfirmations: [], baselineItinerary: [item], affectedItineraryIds: [item.id],
+    priorConfirmations: [], priorCausalEvents: [], baselineItinerary: [item], affectedItineraryIds: [item.id],
     retryLimits: { reads: 3, effects: 3, models: 3 }, modelAttempts: []
   });
   const observation = SemanticObservation.parse({
@@ -105,8 +105,13 @@ export function semanticVector() {
   const snapshot = Snapshot.parse({
     kind: "synthetic-service-ledger", clock, policyVersion: request.policyVersion, reads: 0, readAttempts: [],
     attempts: [{ sequence: 1, at: clock, request: effectRequest, outcome: "accepted",
-      effectId: "unit-effect", faultCode: null }],
-    effects: [{ id: "unit-effect", at: clock, request: effectRequest, delivered: false }]
+      effectId: "unit-effect", faultCode: null, causalSequence: 2 }],
+    effects: [{ id: "unit-effect", at: clock, request: effectRequest, delivered: false, causalSequence: 2 }],
+    causalEvents: [
+      { sequence: 1, at: clock, kind: "decision", trustedSequence: 2, eventDigest: digest(oracle.decisions[0]) },
+      { sequence: 2, at: clock, kind: "effect-attempt", attemptSequence: 1,
+        requestDigest: digest(effectRequest), outcome: "accepted", effectId: "unit-effect" }
+    ]
   });
   observation.attemptAudit = structuredClone(snapshot.attempts);
   return { oracle, observation, snapshot };

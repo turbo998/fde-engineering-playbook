@@ -33,11 +33,15 @@ export const SemanticStep = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("action"), id: Id, action: SemanticAction, expected: ExpectedReply }),
   z.strictObject({ kind: z.literal("approval"), command: TestApprovalCommand, sessionRef: Id, expected: ExpectedReply }),
   z.strictObject({ kind: z.literal("restart") }),
+  z.strictObject({
+    kind: z.literal("trusted-control"), eventKind: z.enum(["decision", "manual"]),
+    trustedSequence: z.number().int().positive()
+  }),
   z.strictObject({ kind: z.literal("advance-clock"), at: Timestamp }),
   z.strictObject({ kind: z.literal("observe"), expected: SemanticObservation })
 ]);
 export const TypedSemanticEpisode = z.strictObject({
-  schemaVersion: z.literal(2), kind: z.literal("private-typed-semantic-preparation"),
+  schemaVersion: z.literal(3), kind: z.literal("private-typed-semantic-preparation"),
   executionStatus: z.literal("not-run"), id: Id, dataset: Dataset,
   steps: z.array(SemanticStep).min(1), oracle: SemanticOracle,
   sourceStepMappings: z.array(z.strictObject({
@@ -55,6 +59,10 @@ export const TypedSemanticEpisode = z.strictObject({
   if (script.dataset.policyVersion !== script.oracle.policyVersion) fail();
   if (script.steps.some((step) => step.kind === "approval" &&
       !script.oracle.actors.some((actor) => actor.sessionId === step.sessionRef))) fail();
+  for (const step of script.steps) {
+    if (step.kind === "trusted-control" && !(step.eventKind === "decision" ?
+      script.oracle.decisions : script.oracle.manualEvents).some((e) => e.sequence === step.trustedSequence)) fail();
+  }
 });
 export const AssertionClassification = z.strictObject({
   sourceIndex: z.number().int().nonnegative(), sourceDigest: Hash,
@@ -72,7 +80,7 @@ export const AssertionClassification = z.strictObject({
   }
 });
 export const PrivateSemanticCompanion = z.strictObject({
-  schemaVersion: z.literal(2), kind: z.literal("private-semantic-companion"),
+  schemaVersion: z.literal(3), kind: z.literal("private-semantic-companion"),
   executionStatus: z.literal("not-run"), sourceSHA256: Hash,
   schemaDigest: Hash, implementationCommit: z.string().regex(/^[a-f0-9]{40}$/),
   cases: z.array(z.strictObject({

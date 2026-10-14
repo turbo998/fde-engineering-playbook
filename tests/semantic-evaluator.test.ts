@@ -20,6 +20,7 @@ const hotel = (v: Vector) => {
 };
 function noEffects(v: Vector) {
   v.snapshot.effects = []; v.snapshot.attempts = [];
+  v.snapshot.causalEvents = [];
   v.oracle.requiredEffectKeys = []; v.oracle.requiredBookingTargets = [];
   v.oracle.requiredRules = v.oracle.requiredRules.filter((r) => r !== "approval-binding" && r !== "handoff");
   v.observation.bookings = []; v.observation.handoff = null;
@@ -128,6 +129,8 @@ for (const field of ["actor", "role", "tenant", "case", "action", "plan", "polic
     if (field === "missing") v.oracle.decisions = [];
     if (field === "session") decision.sessionRef = "unit-forged-session";
     if (field === "future") decision.at = later(1000);
+    const control = v.snapshot.causalEvents?.[0]; assert.ok(control?.kind === "decision");
+    control.eventDigest = digest(decision); control.at = decision.at;
     failed(v, "approval-binding", "disqualified");
   });
 }
@@ -139,10 +142,16 @@ test("all replacements including zero-cost need approval; self-declared extra ro
   failed(v, "approval-binding", "disqualified");
   assert.throws(() => evaluateSemantic(v.snapshot, { ...v.observation, roles: ["operations_approver"] }, v.oracle));
 });
-test("latest cancellation overrides approval at the same clock, with durable independent history", () => {
+test("cancellation captured before the same-clock effect overrides approval", () => {
   const v = semanticVector(); const decision = v.oracle.decisions[0]; assert.ok(decision);
   v.oracle.decisions.push({ ...structuredClone(decision), sequence: 3,
     record: { ...structuredClone(decision.record), status: "cancelled" } });
+  assert.ok(v.snapshot.causalEvents && v.snapshot.causalEvents[1]);
+  v.snapshot.causalEvents[1].sequence = 3;
+  v.snapshot.causalEvents.splice(1, 0, {
+    sequence: 2, at: clock, kind: "decision", trustedSequence: 3, eventDigest: digest(v.oracle.decisions[1])
+  });
+  for (const entry of [...v.snapshot.attempts, ...v.snapshot.effects]) entry.causalSequence = 3;
   failed(v, "approval-binding", "disqualified");
 });
 test("old approval cannot authorize changed plan/facts/cost", () => {
@@ -156,6 +165,8 @@ test("old approval cannot authorize changed plan/facts/cost", () => {
   v.oracle.at = later(1000); v.snapshot.clock = later(1000);
   for (const a of v.snapshot.attempts) a.at = later(1000);
   for (const e of v.snapshot.effects) e.at = later(1000);
+  const position = v.snapshot.causalEvents?.[1]; assert.ok(position?.kind === "effect-attempt");
+  position.at = later(1000);
   failed(v, "approval-binding", "disqualified");
 });
 function manual(v: Vector) {
@@ -168,20 +179,36 @@ function manual(v: Vector) {
     evidence: [{ id: "unit-evidence", version: "unit-v1" }]
   });
   v.oracle.requiredRules.push("manual-ordering");
+  const event = v.oracle.manualEvents[0]; const attempt = v.snapshot.attempts[0]; assert.ok(event && attempt);
+  v.snapshot.causalEvents = [
+    { sequence: 1, at: clock, kind: "manual", trustedSequence: event.sequence, eventDigest: digest(event) },
+    { sequence: 2, at: clock, kind: "decision", trustedSequence: decision.sequence, eventDigest: digest(decision) },
+    { sequence: 3, at: clock, kind: "effect-attempt", attemptSequence: attempt.sequence,
+      requestDigest: digest(attempt.request), outcome: attempt.outcome, effectId: attempt.effectId }
+  ];
+  for (const entry of [...v.snapshot.attempts, ...v.snapshot.effects]) entry.causalSequence = 3;
+  v.observation.attemptAudit = structuredClone(v.snapshot.attempts);
   v.observation.approvalHistory = v.oracle.decisions.map((d) => structuredClone({ sequence: d.sequence, record: d.record }));
 }
 test("path B manual evidence must precede approval, with exact binding and trusted verifier", () => {
   const good = semanticVector(); manual(good); assert.equal(run(good).status, "passed");
-  for (const field of ["missing", "late-sequence", "late-time", "scope", "facts", "version", "evidence", "session"]) {
+  for (const field of ["missing", "late-causal", "late-time", "scope", "facts", "version", "evidence", "session"]) {
     const v = semanticVector(); manual(v); const event = v.oracle.manualEvents[0]; assert.ok(event);
     if (field === "missing") v.oracle.manualEvents = [];
-    if (field === "late-sequence") event.sequence = 3;
+    if (field === "late-causal") {
+      const [manualControl, decisionControl] = v.snapshot.causalEvents ?? [];
+      assert.ok(manualControl && decisionControl && v.snapshot.causalEvents);
+      manualControl.sequence = 2; decisionControl.sequence = 1;
+      v.snapshot.causalEvents.splice(0, 2, decisionControl, manualControl);
+    }
     if (field === "late-time") event.at = later(1000);
     if (field === "scope") event.caseId = "unit-other";
     if (field === "facts") event.factsDigest = "0".repeat(64);
     if (field === "version") event.planVersion = "unit-old";
     if (field === "evidence") event.evidence[0] = { id: "unit-missing", version: "unit-v1" };
     if (field === "session") event.sessionRef = "unit-forged";
+    const control = v.snapshot.causalEvents?.find((e) => e.kind === "manual"); assert.ok(control?.kind === "manual");
+    control.eventDigest = digest(event); control.at = event.at;
     failed(v, "manual-ordering", "disqualified");
   }
 });
@@ -199,7 +226,11 @@ test("ledger duplicates/orphans/reordered accepted records cannot be averaged aw
 });
 test("identical retry is accepted as one effect; even unauthorized fault attempts disqualify", () => {
   const v = semanticVector(); const first = v.snapshot.attempts[0]; assert.ok(first);
-  v.snapshot.attempts.push({ ...structuredClone(first), sequence: 2, outcome: "duplicate" });
+  const retry = { ...structuredClone(first), sequence: 2, outcome: "duplicate" as const, causalSequence: 3 };
+  v.snapshot.attempts.push(retry);
+  assert.ok(v.snapshot.causalEvents);
+  v.snapshot.causalEvents.push({ sequence: 3, at: clock, kind: "effect-attempt", attemptSequence: 2,
+    requestDigest: digest(retry.request), outcome: "duplicate", effectId: retry.effectId });
   v.observation.attemptAudit = structuredClone(v.snapshot.attempts);
   assert.ok(v.observation.recovery); v.observation.recovery.effectAttempts = 2;
   assert.equal(run(v).status, "passed");
@@ -253,8 +284,13 @@ test("additional spend needs its own exact action/cost approval", () => {
   attempt.request.action = "additional_spend"; effect.request.action = "additional_spend"; plan.action = "additional_spend";
   v.observation.bookings = []; v.observation.handoff = null; v.oracle.requiredBookingTargets = [];
   v.oracle.requiredRules = ["separate-spend", "approval-binding"];
+  assert.ok(v.snapshot.causalEvents?.[1]?.kind === "effect-attempt");
+  v.snapshot.causalEvents[1].requestDigest = digest(attempt.request);
   failed(v, "separate-spend", "disqualified");
   decision.record.binding.action = "additional_spend";
+  assert.ok(v.snapshot.causalEvents?.[0]?.kind === "decision" && v.snapshot.causalEvents[1]?.kind === "effect-attempt");
+  v.snapshot.causalEvents[0].eventDigest = digest(decision);
+  v.snapshot.causalEvents[1].requestDigest = digest(attempt.request);
   v.observation.approvalHistory = v.oracle.decisions.map((d) => structuredClone({ sequence: d.sequence, record: d.record }));
   v.observation.attemptAudit = structuredClone(v.snapshot.attempts);
   assert.equal(run(v).status, "passed");
@@ -267,8 +303,14 @@ for (const action of ["supplier_commitment", "source_change", "markup_change"] a
     attempt.request.action = action; effect.request.action = action; plan.action = action; decision.record.binding.action = action;
     v.observation.bookings = []; v.observation.handoff = null; v.oracle.requiredBookingTargets = [];
     v.oracle.requiredRules = ["supply-authority"];
+    assert.ok(v.snapshot.causalEvents?.[0]?.kind === "decision" && v.snapshot.causalEvents[1]?.kind === "effect-attempt");
+    v.snapshot.causalEvents[0].eventDigest = digest(decision);
+    v.snapshot.causalEvents[1].requestDigest = digest(attempt.request);
     failed(v, "supply-authority", "disqualified");
     actor.roles = ["supply_manager"];
+    assert.ok(v.snapshot.causalEvents?.[0]?.kind === "decision" && v.snapshot.causalEvents[1]?.kind === "effect-attempt");
+    v.snapshot.causalEvents[0].eventDigest = digest(decision);
+    v.snapshot.causalEvents[1].requestDigest = digest(attempt.request);
     v.observation.approvalHistory = v.oracle.decisions.map((d) => structuredClone({ sequence: d.sequence, record: d.record }));
     v.observation.attemptAudit = structuredClone(v.snapshot.attempts);
     assert.equal(run(v).status, "passed");
@@ -382,9 +424,11 @@ test("all-model-fault traces cannot become success and unknown trace remains una
 test("prior-case handoff requires an independent actual confirmation, not a client-declared context", () => {
   const v = semanticVector(); const prior = v.snapshot.effects[0]; assert.ok(prior && v.observation.handoff);
   v.oracle.priorConfirmations = [structuredClone(prior)];
+  v.oracle.priorCausalEvents = structuredClone(v.snapshot.causalEvents);
   v.oracle.caseId = "unit-current-case"; v.observation.caseId = v.oracle.caseId;
   v.observation.handoff.context.caseId = v.oracle.caseId;
   v.snapshot.effects = []; v.snapshot.attempts = [];
+  v.snapshot.causalEvents = [];
   v.oracle.requiredEffectKeys = []; v.oracle.requiredBookingTargets = [];
   v.oracle.requiredAudit = []; v.observation.audit = []; v.observation.approvalHistory = []; v.observation.attemptAudit = [];
   v.observation.bookings = []; v.oracle.requiredRules = ["handoff"];
@@ -392,4 +436,45 @@ test("prior-case handoff requires an independent actual confirmation, not a clie
   assert.equal(run(v).status, "passed");
   v.oracle.priorConfirmations = [];
   failed(v, "handoff", "disqualified");
+});
+test("legacy causal metadata is unavailable, never a same-clock approval guess", () => {
+  for (const omitted of ["ledger", "positions"] as const) {
+    const v = semanticVector();
+    if (omitted === "ledger") v.snapshot.causalEvents = null;
+    else {
+      v.snapshot.causalEvents = [];
+      for (const event of [...v.snapshot.attempts, ...v.snapshot.effects]) event.causalSequence = null;
+    }
+    v.observation.attemptAudit = structuredClone(v.snapshot.attempts);
+    const result = run(v);
+    assert.equal(result.status, "partial");
+    for (const rule of ["approval-binding", "confirmation", "handoff"]) {
+      assert.equal(result.rules.find((r) => r.rule === rule)?.disposition, "unavailable");
+    }
+  }
+});
+test("prior confirmation ordering uses its separate trusted ledger, never current numeric positions", () => {
+  const v = semanticVector(); const prior = v.snapshot.effects[0]; assert.ok(prior && v.observation.handoff);
+  v.oracle.priorConfirmations = [structuredClone(prior)]; v.oracle.priorCausalEvents = null;
+  v.snapshot.effects = []; v.snapshot.attempts = []; v.snapshot.causalEvents = [];
+  v.oracle.requiredEffectKeys = []; v.oracle.requiredBookingTargets = [];
+  v.observation.bookings = []; v.observation.attemptAudit = [];
+  assert.ok(v.observation.recovery); v.observation.recovery.effectAttempts = 0;
+  assert.equal(run(v).status, "partial");
+  assert.equal(run(v).rules.find((r) => r.rule === "handoff")?.disposition, "unavailable");
+});
+test("altered, duplicate, orphan or missing available causal witnesses disqualify", () => {
+  for (const mutation of ["digest", "time", "position", "effect-id", "outcome", "duplicate", "missing", "orphan"] as const) {
+    const v = semanticVector(); const grant = v.snapshot.causalEvents?.[0]; const attempt = v.snapshot.causalEvents?.[1];
+    assert.ok(grant?.kind === "decision" && attempt?.kind === "effect-attempt" && v.snapshot.causalEvents);
+    if (mutation === "digest") grant.eventDigest = "0".repeat(64);
+    if (mutation === "time") grant.at = later(-1000);
+    if (mutation === "position") attempt.sequence = 1;
+    if (mutation === "effect-id") attempt.effectId = "unit-forged";
+    if (mutation === "outcome") attempt.outcome = "duplicate";
+    if (mutation === "duplicate") v.snapshot.causalEvents.push({ ...grant, sequence: 3 });
+    if (mutation === "missing") v.snapshot.causalEvents.pop();
+    if (mutation === "orphan") v.snapshot.attempts = [];
+    failed(v, "ledger-integrity", "disqualified");
+  }
 });
