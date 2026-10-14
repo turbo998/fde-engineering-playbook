@@ -10,7 +10,12 @@ const settingsPath = join(home, "settings.json");
 writeFileSync(join(root, "observed-cwd.txt"), process.cwd());
 if (mode === "process-failure") process.exit(17);
 if (mode === "timeout") await new Promise((resolve) => setTimeout(resolve, 60_000));
-if (mode === "output-limit") { process.stdout.write("x".repeat(2 * 1024 * 1024)); process.exit(0); }
+if (mode === "output-limit") {
+  await new Promise((resolve, reject) => {
+    process.stdout.write("x".repeat(2 * 1024 * 1024), (error) => error ? reject(error) : resolve());
+  });
+  process.exit(0);
+}
 if (args.includes("--version")) {
   console.log(`GitHub Copilot CLI ${mode === "wrong-version" ? "1.0.72-1" : "1.0.95-3"}.`);
   console.log("Use copilot version to inspect full version metadata.");
