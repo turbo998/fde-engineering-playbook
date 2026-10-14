@@ -1,6 +1,6 @@
 # 实际交付状态
 
-更新日期：2026-10-14。**当前离线阶段有可运行交付，端到端 benchmark 仍为 `not-run`，整体为 partial。** 下面没有模型成绩、四组候选或虚构调用记录。
+更新日期：2026-10-15。**当前离线阶段有可运行交付，端到端 benchmark 仍为 `not-run`，整体为 partial。** 下面没有模型成绩、四组候选或虚构调用记录。
 
 ## 完成、部分完成与阻塞范围
 
@@ -18,10 +18,11 @@
 | 账户元数据预检 | completed（无推理） | SDK 已登录及模型目录可见；Codex 只读认证状态已确认；详细目录不公开 |
 | 方法安装/有效隔离 | blocked for measurement | 未安装方法包，未通过跨组访问 canary、进程隔离和全工具链核验；导出 canary 不能替代 |
 | 编码组、应用推理、业务验收 | not-run | 精确模型、数值额度、批准、完整执行器与私有评测集成未就绪 |
+| 可复用宿主库存诊断 | completed（无推理 discovery） | 固定五文件身份 pin、严格清洗 receipt、disposable home、baseline 2/0 与 synthetic treatment 3/1；不证明 activation/隔离 |
 
 ## 2026-10-14 语义增量的实际验证
 
-`npm run check` passed：严格类型、lint、**155 tests / 0 failed / 0 skipped**、服务端/React build、实际 loopback 子进程 smoke、82 个公开文本文件的扫描/相对链接核验。首次语义增量为 141 tests；随后因果顺序修正增加 14 tests：1 项实际 HTTP execute-before-grant 回归、8 项同钟有序 HTTP episode、3 项因果可用性/隔离/篡改检查、2 项 SQLite 重开/旧数据回归。没有执行任何私有 case 或模型调用。
+因果修正时 `npm run check` passed：严格类型、lint、**155 tests / 0 failed / 0 skipped**、服务端/React build、实际 loopback 子进程 smoke、82 个公开文本文件的扫描/相对链接核验。首次语义增量为 141 tests；随后因果顺序修正增加 14 tests：1 项实际 HTTP execute-before-grant 回归、8 项同钟有序 HTTP episode、3 项因果可用性/隔离/篡改检查、2 项 SQLite 重开/旧数据回归。没有执行任何私有 case 或模型调用。
 
 | 验证对象 | 实际结果与边界 |
 | --- | --- |
@@ -40,6 +41,14 @@
 原先仅按冻结时钟和审批历史序号授权的逻辑存在真实追认漏洞，141 tests 的历史通过不能证明它正确。当前 schema 明确升级（oracle v2、episode/companion v3），仅按实际服务因果账本核验审批/人工事件先后；缺失证据最多 partial，矛盾证据失败。控制器 marker 不是候选 claims 或 acknowledgment，未暴露为应用 HTTP 能力；prepared 的预期位置和 prior fixture 不是私有执行证明。服务重开测试真实关闭/重新打开 SQLite，语义 HTTP 的 restart 测试只调用适配器重启回调，不冒充私有应用进程重启。
 
 独立语义报告只核验 typed 合同，逐规则列出 disposition、严重性和实际检查/失败/不可用分母，严重违规直接取消资格；恒列自由文本支持、真实体验预订、生产身份、不可篡改审计、浏览器/人类质量为未证明维度。完整跨租户响应内容追踪仍 unsupported。私有 companion 留在忽略的本地目录，不进入 Git、CI、编码组或模型上下文；脚本准备不是 benchmark 成绩。远端 exact-commit CI 必须另行从提交/PR 记录确认，不由本机通过推断。
+
+## 2026-10-15 无推理库存增量
+
+可复用 `host:inventory` 只运行固定宿主的 version/list 与官方 temporary canary disable，CLI JSON 严格解析、固定安全来源 count map、输出/时间有界，receipt 不含原始路径、说明、环境或凭据。五个后来观察的 Node/entry/package/CLI-main/runtime hash 在开始/结束核验，非 npm shim，不自动更新/安装。未显式调用内部 sandbox support API；字段为 `nativePlatformSupport=null`，未请求模型、候选、沙箱 canary 或全局配置操作。
+
+本机实测 receipt 为 `observed` / inventory exclusivity `verified`：baseline **2 enabled / 0 nonbuiltin**，synthetic treatment **3 / 1**，零模型请求、零 errorCodes，temporary fixtures 全部 removed。比历史协调会话更严格的 AppData/temp/cache 重定向使 clean 初始只发现 2 builtins / 0 inherited；旧 36+2 仍是其原环境的有效观察，不作为新环境结论。个人 canary 在 `--no-custom-instructions` 下仍启用，official disable 及临时 disabledSkills 集合生效。此结果不证明 method activation、host 投影 instructions、hooks/memory、OS/网络/文件/cross-arm/holdout 分离。
+
+新增 26 个离线测试覆盖实际 CLI double、未知/malformed instruction/skill/plugin/MCP、unsafe 来源键/缺失 enabled/重名、进程失败/超时/整体截止/输出超限、错误版本/可执行或 hash/运行中 drift、继承 persistence、无效 disable、额外/错路径 treatment、builtin 缺失、清洗 receipt/显式 opt-in、配置链接和清理链接替换。完整 `npm run check` passed：**181 tests / 0 failed / 0 skipped**、types/lint/build、真实离线 startup、86 个公开制品与相对链接扫描。测试只检查自身 fixture 清理，不以共享临时目录的全局数量判断，避免与其他安全 probe 竞争。精确提交 CI 证据另从最终提交/PR 确认；原语和合成库存测试仍不是四组或私有验收成绩。
 
 ## 2026-09-29 历史验证（非当前测试数量）
 
@@ -67,7 +76,7 @@
 
 首阶段曾修复 SDK reasoning 类型与 smoke 可选资产路径的 typecheck 失败。本增量曾修复 SQLite 方法 mock 的重载类型，以及私有 CLI 因间接导入数据库而输出实验警告的问题：共享 schema 与数据库实现分离后，私有 CLI stderr 为空。普通 SQLite 测试/服务仍保留实验性警告，没有全局屏蔽。
 
-测试数据为原创合成单元向量：`unit-*`、测试币种及测试小额限额不是已批准业务政策/实验预算；从未发送到模型。历史 65/141 项或当前 155 项工具测试均不能写成“12 个业务场景通过”，也不能证明生产可信身份、任意文本事实支持或浏览器用户路径已实测。本增量 evaluator 开发者获准读取私有源来另行编写 companion；不复制正文到公开文件，不解释/执行自然语言，不删除断言。
+测试数据为原创合成单元向量：`unit-*`、测试币种及测试小额限额不是已批准业务政策/实验预算；从未发送到模型。历史 65/141/155 项或当前 181 项工具测试均不能写成“12 个业务场景通过”，也不能证明生产可信身份、任意文本事实支持或浏览器用户路径已实测。本增量 evaluator 开发者获准读取私有源来另行编写 companion；不复制正文到公开文件，不解释/执行自然语言，不删除断言。
 
 ## 未做且不能冒充的工作
 

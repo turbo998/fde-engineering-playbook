@@ -1,6 +1,6 @@
 # 能力与执行预检
 
-截至 2026-10-14（保留 9 月历史能力证据，新增无推理库存证据与离线语义增量）。**文档支持、已安装、已登录、元数据可见、真实推理成功、实验获准是不同状态。** 没有进行任何实测编码或 live inference。
+截至 2026-10-15（保留 9 月历史能力及 10 月协调会话证据，新增可复用无推理库存诊断）。**文档支持、已安装、已登录、元数据可见、真实推理成功、实验获准是不同状态。** 没有进行任何实测编码或 live inference。
 
 ## 本机能力证据
 
@@ -14,6 +14,9 @@
 | Codex | 已有只读认证证据 | 协调会话的 `codex login status` 成功且已登录；不证明具体模型/额度/推理可用 |
 | Bun / Claude CLI / Docker | 未就绪 | 既有预检未发现；本阶段未全局安装，不靠它们运行离线底座 |
 | OS/跨组隔离 | 未验证，有具体污染线索 | 干净 home/白名单环境仍发现 36 inherited + 2 builtin skills；个人 skill canary 增至 39，`--no-custom-instructions` 未排除它。发现不等于激活，仍不能证明隔离 |
+| 可复用库存诊断 | 已无推理验证，仅 discovery | 独立观察 baseline 2 enabled / 0 nonbuiltin；synthetic treatment 3 / 1；官方 temporary disable 生效；receipt 清洗与失败/unknown 处理；所有临时 fixture 已删除 |
+| Native 平台支持检测 | 协调会话已检测，非 executor | 内部版本绑定 detector 在 Windows 26200.9457 / CLI 1.0.95-3 返回 true；仅版本阈值/支持检查，无 process/filesystem/network canary。本仓库诊断不调用它，support 为 null |
+| 新公开 SDK 元数据访问 | TLS 阻塞，未绕过 | 协调会话的 npm 与 OS HTTPS TLS 均失败；未改变 trust/TLS、替换 SDK 或发模型请求；旧 authenticated 元数据不是当前完整链路证明 |
 | seed-only 制品边界 | 已离线验证 | 固定 allowlist、链接/穿越拒绝、可信 hash、合成污染 canary、导出副本独立安装/构建/启动；不是 OS 隔离 |
 | 私有准备 schema/引用/分类 | v1/v2 保留，v3 已离线准备 | 12 cases / 40 源步骤 / 77 typed 步骤（含 13 控制事件）/ 35 全量分类；18 机器规则、10 未执行集成、6 rubric、1 unsupported；0 私有执行 |
 | 独立 typed 语义 oracle | 合成确定性测试已覆盖 | 19 规则、角色/版本/批准/手工事件/账本/边界/恢复；不证明自由文本、真实身份、浏览器或完整私有候选通过 |
@@ -21,6 +24,10 @@
 | 精确模型与额度批准 | 缺失 | manifest 的模型/限额/approval 保持未填写 |
 
 仅元数据查询通过不等于“仍未接入任何网络”：公开源码/依赖下载和官方元数据访问使用了网络，但没有发推理请求或真实业务请求。账户标识、原始响应及详细模型目录不发布。`scripts/copilot-metadata.ts --metadata-only` 不是 CI 的一部分，后续执行须明确授权，不自动作为 smoke。
+
+新库存 receipt 与历史协调会话 receipt 的环境不同，不能拼成同一实验：历史保留 AppData，发现 36 inherited + 2 builtin；本仓库诊断还把 APPDATA/LOCALAPPDATA/temp/XDG config/cache 指向 disposable home，clean 初始只发现 2 builtin / 0 inherited。两者都观察到 `--no-custom-instructions` 不移除个人 skill canary。新的五文件身份 pin 是后来只读观察并重新核验，不是旧 receipt 原本包含的证据。较窄环境中的非 builtin 零发现不证明 activation、host 投影规则、hooks/memory、真实方法加载或跨组/私有隔离已完成；源代码的 synthetic inherited-skill 测试仍验证不能默认 home 重定向会清除继承。
+
+`host:inventory -- --inventory-only` 要求私有 pin 输入，固定支持 1.0.95-3，不自动探测 PATH/npm shim。只允许 list/version/temporary canary disable，严格已知 JSON、静态来源 map、1 MiB 输出、30 秒单进程/90 秒整体 CLI 截止；未知返回 unavailable/null，不读取 goldens 或模型 session。非空 plugin/MCP 等形状未支持，不能作为空集合通过。baseline/treatment exclusivity 仅指库存集合；未授权真实方法处理或 measured arms。原生 API、TLS trust 和 SDK 公共元数据恢复不在此 bounded 增量中实现。
 
 ## 方法兼容矩阵
 

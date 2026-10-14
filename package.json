@@ -22,6 +22,7 @@
     "seed:verify": "tsx scripts/export-seed.ts verify",
     "fixtures:validate": "tsx scripts/validate-private.ts",
     "fixtures:validate-semantic": "tsx scripts/validate-semantic.ts",
+    "host:inventory": "tsx scripts/host-inventory.ts",
     "check": "npm run typecheck && npm run lint && npm test && npm run build && npm run smoke:offline && npm run check:public"
   },
   "dependencies": {

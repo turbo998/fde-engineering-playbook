@@ -16,6 +16,7 @@
 | `private-fixtures.ts` / `dataset.ts` | 无数据库副作用的准备材料 schema/引用核验、共享模拟数据 schema | 业务 oracle 完备性、执行 holdout、解释追加断言 |
 | `model.ts` | 与固定 SDK 类型匹配的协议映射、禁止工具权限、明确离线替身路径 | 业务提示词、真实推理开关、SDK 内部请求硬封顶 |
 | `manifest.ts` / `budget.ts` / `runner.ts` | 严格实测契约、持久调用/token 准入原语、拒绝未就绪执行 | 用户批准真实性证明、OS 沙箱、已完成 benchmark |
+| `host-inventory.ts` / `scripts/host-inventory.ts` | 显式 opt-in、固定宿主身份、disposable-only CLI 库存及 baseline/synthetic treatment 集合检查、清洗 receipt | 模型请求、真实方法激活、native sandbox executor、OS/跨组隔离或实验批准 |
 
 未来数据路径为：候选 React → 候选 Fastify 业务层 → 统一模型传输 / 合成服务。外部控制器持有私有脚本和 oracle，收集候选数据库/浏览器观察及独立服务账本。评估器不得根据应用自写“成功”判分。
 
@@ -36,6 +37,12 @@
 合同中的 `IdentityClaims` 仅定义可信合成会话应提供什么。未来各候选必须实现后端会话映射及授权，不能把来自任意 JSON 的 claims 当可信身份。共享代码没有完成这一业务解决方案。
 
 数据库是本地可改文件，不是不可篡改账本。实际评测要求候选不可写评测器数据库和 oracle。Git worktree 只是代码隔离，不是安全边界；文件、环境变量、进程和网络访问需另行限制与 canary 验证。
+
+无推理库存诊断使用调用者提供的私有身份 pin，不解析 npm shim，不自动更新/安装或改变系统信任。只支持明确的 CLI 1.0.95-3 格式：Node、`index.js`、package、`cli-main.js` 和当前平台 runtime 文件 hash 在开始/结束核验；这不是签名认证或对并发文件替换的完整防护。子环境仅保留必要系统变量，把 profile/AppData/temp/config/cache 重定向到该 episode 的 disposable 根，启用 offline/no-update/no-remote/no-export/disabled-builtin-MCP 标志。单进程输出/超时与整体 CLI 时间有界；不提供任意命令或模型入口。
+
+skill 的来源计数采用固定枚举 map，未知来源/字段/缺失 enabled/重名拒绝。instruction 列表只计发现数，不能从 `defaultDisabled` 推出实际 enabled；非空 plugin/MCP 当前 unavailable。官方 canary disable 的临时 `settings.json.disabledSkills` 必须严格匹配，再仅在临时 home 禁用已发现非 builtin；baseline 校验原 builtin 集合完整，treatment 校验相同 builtin 加唯一指定 project canary及其临时路径。所有动态名称、路径、描述仅内部比较/hash，不进入 receipt。配置路径与清理目标拒绝链接替换；失败/timeout 仍清理自身根，目标不明确则报错，不删除外部目标。
+
+库存 receipt 的 verified 只限这一集合观察：不包括 host 投影 instructions、hooks/memory、方法 activation、OS/文件/网络/cross-arm/holdout 分离。历史 native 平台 detector 的 true 也不是运行 canary；本工具不调用这个内部版本绑定 API，字段保持 `null`。它不读私有 goldens、不填写 manifest 的模型/预算/批准，也不分发给编码组或进入 seed。
 
 ## 种子与评测资产分发
 

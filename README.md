@@ -49,6 +49,19 @@ npm run benchmark
 
 独立 typed 语义 oracle 进一步核对 19 项业务规则、可信资源/身份/审批/人工事件、实际 read/effect 账本和 structured provenance，逐规则报告分母、严重性与不可用项，不评判任意 prose。v3 typed episode 用控制器专用步骤记录可信事件，服务端 SQLite 为其与效果尝试分配共同因果序号；冻结时钟相同不代表先后，缺少因果证据不能 passed。HTTP 接线仍仅允许离线测试双；私有准备、通用单元测试和完整 benchmark 是不同层次。
 
+## 显式无推理宿主库存诊断
+
+```powershell
+# 私有输入文件包含绝对 Node/CLI/package 路径、固定版本及五个独立保存的 SHA256：
+npm run host:inventory -- --inventory-only $env:FDE_HOST_TARGET
+```
+
+输入采用 `HostInventoryTarget`：`nodePath`、`entryPath`（package 内的 `index.js`）、`packageDirectory`、`expectedVersion`（仅支持 `1.0.95-3`），以及 `sha256` 的 `node` / `entry` / `package` / `cliMain` / `runtime`。路径和 pin 文件必须私有保存；不要通过 PATH/npm shim 自动选择宿主或把当前 hash 自动当成批准。诊断核对包与可执行身份、严格版本响应、最多 1 MiB 的已知 CLI JSON；每进程最多 30 秒，整体 CLI 阶段最多 90 秒。缺失/未知/失败保留 `null` 和静态代码，非零退出，不补造零或成功。
+
+仅运行 version、instruction/skill/plugin/mcp list 和官方 synthetic skill disable；不创建模型 session、不发送请求、不调用候选。CLI home、profile、AppData、cache 和 temp 都指向工作树内独立临时目录，设置仅在那里改写，结束后删除该目录。库存验证只证明 baseline 的已启用集合为原 builtin 集合，synthetic treatment 恰好增加一个指定 workspace canary；不加载真实方法。receipt 只有固定标签、数量、hash 和验证标志，不含原路径、描述、环境或凭据。非空 plugin/MCP 等未支持的形状明确 unavailable，不自动放行。
+
+**discovery 不是 activation 或隔离证明。** host 投影指令、hooks/memory、OS/网络/文件/跨组/holdout 隔离及真实方法加载仍未验证；native platform support 在此诊断中为 `null`，没有显式调用内部 sandbox support API 或运行沙箱 canary。该 lab 工具不进入中立种子，不填写模型、预算或批准字段。实际环境差异和剩余阻塞见[预检](docs/preflight.md)与[状态](docs/status.md)。
+
 ## 种子导出与私有准备材料校验
 
 ```powershell
