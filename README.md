@@ -12,6 +12,7 @@
 | 固定版本研究 | [HVE](docs/research/hve.md)、[Superpowers](docs/research/superpowers.md)、[gstack](docs/research/gstack.md)、[Spec Kit / OpenSpec](docs/research/specifications.md) |
 | 方法比较与实践 | [对比](docs/comparison.md)、[FDE 手册](docs/fde-playbook.md) |
 | 实验与能力边界 | [协议](docs/protocol.md)、[架构](docs/architecture.md)、[预检](docs/preflight.md)、[实际状态](docs/status.md) |
+| 运行前质量/评审准备 | [中立量表与 receipt 契约](docs/quality-review.md)（draft、无评审执行或完整盲化证明） |
 | 原创模板 | [发现](templates/discovery.md)、[计划](templates/plan.md)、[验收](templates/acceptance.md)、[交接](templates/handoff.md)、[评测](templates/evaluation.md) |
 
 原定四组保持不变：baseline / HVE / Superpowers 是待验证的 Copilot 受控轨道；gstack + Codex 是原生观察轨道，不参与跨宿主方法增益排名。Spec Kit 与 OpenSpec 仅作补充文档研究。

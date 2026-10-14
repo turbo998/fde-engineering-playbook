@@ -22,6 +22,7 @@
 | 独立 typed 语义 oracle | 合成确定性测试已覆盖 | 19 规则、角色/版本/批准/手工事件/账本/边界/恢复；不证明自由文本、真实身份、浏览器或完整私有候选通过 |
 | 通用 episode 驱动 | 已离线验证 | 仅 loopback HTTP 测试双，事件/审批/重启/故障/独立 oracle；候选执行仍禁用 |
 | 精确模型与额度批准 | 缺失 | manifest 的模型/限额/approval 保持未填写 |
+| 中立质量/receipt 契约 | 已准备、未批准/执行 | 六维锚点、三 journeys、七 pending screening；严格独立 registry 绑定，不认证 reviewer 或证明盲化，六项 R 仍 unreviewed |
 
 仅元数据查询通过不等于“仍未接入任何网络”：公开源码/依赖下载和官方元数据访问使用了网络，但没有发推理请求或真实业务请求。账户标识、原始响应及详细模型目录不发布。`scripts/copilot-metadata.ts --metadata-only` 不是 CI 的一部分，后续执行须明确授权，不自动作为 smoke。
 
@@ -57,7 +58,7 @@ gstack 的外部 review 需要另一 CLI 的认证；本机 Codex 已登录不�
 1. 精确指定受控组编码模型、gstack 原生编码模型、统一应用运行模型及所有评审模型/类型、reasoning/context。
 2. 明确每组和总体数值额度、调用/token/重试/时间界限，覆盖 smoke、评审与最终验证，并接受软上限风险。
 3. 完成有效 OS/全局污染隔离清单和跨组访问 canary、Bun/browser 等原生依赖、逐模型请求准入/计量和终止语义的实际验证；现有 seed 导出 canary 不能替代。
-4. 当前可信 typed 脚本准备与 typed 语义规则已经补充；仍需候选后端/持久状态/UI 的私有集成、rubric 和 unsupported 维度、完整跨租户内容追踪、冻结/封存种子与脚本/评分锚点/盲评方案/顺序及哈希，取得绑定版本的批准后再实现正式 live runner。上述不是“全部仅差支出”：0 个私有 episode、业务执行与完整验收仍未完成。
+4. 当前可信 typed 脚本、typed 语义规则和 [draft 质量/评审契约](quality-review.md) 已准备；仍需候选后端/持久状态/UI 的私有集成、实际独立评审与 unsupported 维度、完整跨租户内容追踪、冻结/封存种子与脚本/评分锚点/盲评方案/顺序及哈希，取得绑定版本的批准后再实现正式 live runner。上述不是“全部仅差支出”：0 个私有 episode、业务执行与完整验收仍未完成。
 
 10 月 1.0.95-3 的无推理 CLI help 证据表明 `--max-ai-credits` 最低为 30，仍是 response 后软上限；隐藏 compaction 消耗额度，子 agent 共享会话额度。旧假设的 20-credit CLI cap 不可复用，当前持久 admission 原语不是 SDK/CLI 内部模型请求控制。sandbox help 也明确 built-in 文件编辑不在 OS sandbox 内，默认规则允许用户目录、开发缓存/配置和 outbound；开启开关不构成跨组或私有 holdout 隔离证明。本实现会话的运行模型只是宿主恢复选择，不是四臂实验模型批准。
 

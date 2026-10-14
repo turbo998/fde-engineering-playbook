@@ -19,6 +19,7 @@
 | 方法安装/有效隔离 | blocked for measurement | 未安装方法包，未通过跨组访问 canary、进程隔离和全工具链核验；导出 canary 不能替代 |
 | 编码组、应用推理、业务验收 | not-run | 精确模型、数值额度、批准、完整执行器与私有评测集成未就绪 |
 | 可复用宿主库存诊断 | completed（无推理 discovery） | 固定五文件身份 pin、严格清洗 receipt、disposable home、baseline 2/0 与 synthetic treatment 3/1；不证明 activation/隔离 |
+| 中立质量/评审 receipt 契约 | completed（draft preparation） | 六维锚点、三 journeys、七 pending screening；实际 reviewer/config/assignment/budget=null，六项 R 仍 unreviewed |
 
 ## 2026-10-14 语义增量的实际验证
 
@@ -49,6 +50,14 @@
 本机实测 receipt 为 `observed` / inventory exclusivity `verified`：baseline **2 enabled / 0 nonbuiltin**，synthetic treatment **3 / 1**，零模型请求、零 errorCodes，temporary fixtures 全部 removed。比历史协调会话更严格的 AppData/temp/cache 重定向使 clean 初始只发现 2 builtins / 0 inherited；旧 36+2 仍是其原环境的有效观察，不作为新环境结论。个人 canary 在 `--no-custom-instructions` 下仍启用，official disable 及临时 disabledSkills 集合生效。此结果不证明 method activation、host 投影 instructions、hooks/memory、OS/网络/文件/cross-arm/holdout 分离。
 
 新增 26 个离线测试覆盖实际 CLI double、未知/malformed instruction/skill/plugin/MCP、unsafe 来源键/缺失 enabled/重名、进程失败/超时/整体截止/输出超限、错误版本/可执行或 hash/运行中 drift、继承 persistence、无效 disable、额外/错路径 treatment、builtin 缺失、清洗 receipt/显式 opt-in、配置链接和清理链接替换。完整 `npm run check` passed：**181 tests / 0 failed / 0 skipped**、types/lint/build、真实离线 startup、86 个公开制品与相对链接扫描。测试只检查自身 fixture 清理，不以共享临时目录的全局数量判断，避免与其他安全 probe 竞争。精确提交 CI 证据另从最终提交/PR 确认；原语和合成库存测试仍不是四组或私有验收成绩。
+
+## 2026-10-15 中立质量/评审契约增量
+
+新增 [draft 质量与 receipt 契约](quality-review.md)，仅通用原创锚点、独立控制器 registry 与严格 receipt/opaque 结构盲包。候选布尔值不能自授 reviewer authority；有效期/撤销、criterion/candidate/artifact/rubric/config/evidence 绑定、重复/无效 grant、不可用不计分、独立 N/A 和 hard failure 冲突均在离线合成合同中检查。验证不认证 registry 来源或执行评审，所有实际 reviewer/config/assignment/budget 默认 null；无 judge、browser 或 authority HTTP endpoint。
+
+只读核验父会话 draft hash 后以本项目 TS/Zod/hash 模式重新实现；未读取私有 goldens、未导入 scratch JS、未修改 v1/v2/v3 或既有语义绑定。18M/10I/6R/1U、0 个私有 episode 与六项 R unreviewed 不变。六维/三 journeys/七 WCAG-linked screening 不是完整工程质量或 conformance；结构盲包不含方法标签，但内容可能暴露方法。
+
+新增 **61 项离线 review-contract 合成测试**；完整 `npm run check` 为 **264 passed / 0 failed / 0 skipped**，types/lint/build、实际 offline startup 与 90 项公开扫描/相对链接均通过。seed 污染回归显式加入两个新 lab 模块，仍只导出 20 文件 + manifest。protected seed/contracts/manifest/semantic 实现无 diff，preflight 仍拒绝 readiness、benchmark 按预期 exit 1 / `MANIFEST_REJECTED`；这些工具检查不是实际 review 或业务 acceptance。
 
 ## 2026-09-29 历史验证（非当前测试数量）
 

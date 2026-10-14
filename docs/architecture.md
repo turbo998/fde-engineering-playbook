@@ -17,6 +17,7 @@
 | `model.ts` | 与固定 SDK 类型匹配的协议映射、禁止工具权限、明确离线替身路径 | 业务提示词、真实推理开关、SDK 内部请求硬封顶 |
 | `manifest.ts` / `budget.ts` / `runner.ts` | 严格实测契约、持久调用/token 准入原语、拒绝未就绪执行 | 用户批准真实性证明、OS 沙箱、已完成 benchmark |
 | `host-inventory.ts` / `scripts/host-inventory.ts` | 显式 opt-in、固定宿主身份、disposable-only CLI 库存及 baseline/synthetic treatment 集合检查、清洗 receipt | 模型请求、真实方法激活、native sandbox executor、OS/跨组隔离或实验批准 |
+| `quality-rubric.ts` / `review-receipt.ts` | draft 六维锚点、三 journeys、七 pending screening、独立控制器 registry 绑定、严格 receipt 与 opaque 结构盲包 | reviewer/config/budget 批准、事实/盲化证明、reviewer/model/browser 执行或 benchmark 成绩 |
 
 未来数据路径为：候选 React → 候选 Fastify 业务层 → 统一模型传输 / 合成服务。外部控制器持有私有脚本和 oracle，收集候选数据库/浏览器观察及独立服务账本。评估器不得根据应用自写“成功”判分。
 
