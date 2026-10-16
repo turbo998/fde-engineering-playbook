@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@fastify/static": "10.1.4",
-    "@github/copilot-sdk": "1.0.15",
+    "@github/copilot-sdk": "1.0.20",
     "fastify": "5.12.5",
     "react": "19.3.0",
     "react-dom": "19.3.0",
