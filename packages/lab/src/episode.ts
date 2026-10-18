@@ -72,7 +72,7 @@ export class OfflineHttpAdapter implements ApplicationTestAdapter {
     if (response.status !== 200) throw new ProtocolError("ADAPTER_OBSERVATION_HTTP");
     return Observation.parse(await response.json());
   }
-  private async request(path: string, options: RequestInit = {}) {
+  protected async request(path: string, options: RequestInit = {}) {
     try {
       return await fetch(new URL(path, this.origin), {
         ...options, redirect: "error", signal: AbortSignal.timeout(this.timeoutMs)
