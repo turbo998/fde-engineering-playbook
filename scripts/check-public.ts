@@ -5,13 +5,13 @@ import { dirname, resolve } from "node:path";
 const files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], { encoding: "utf8" })
   .split("\0").filter(Boolean);
 const rootFiles = new Set([
-  "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md", ".gitignore", ".gitattributes",
+  "README.md", "README.en.md", "LICENSE", "THIRD_PARTY_NOTICES.md", ".gitignore", ".gitattributes",
   ".npmrc", "package.json", "package-lock.json", "tsconfig.json", "tsconfig.build.json", "eslint.config.js",
   ".github/CONTRIBUTING.md", ".github/SECURITY.md", ".github/dependabot.yml"
 ]);
 const errors: string[] = [];
 for (const file of files) {
-  if (!rootFiles.has(file) && !/^(apps\/seed|packages\/(contracts|lab)|tests|scripts|docs|templates|experiment|\.github\/workflows)\//.test(file)) {
+  if (!rootFiles.has(file) && !/^(apps\/seed|assets|packages\/(contracts|lab)|tests|scripts|docs|templates|experiment|\.github)\//.test(file)) {
     errors.push(`Not in publication allowlist: ${file}`);
   }
   if (/(^|\/)(private|holdout|candidates|transcripts|\.local)(\/|$)|\.(sqlite|db|log|png|jpg|pdf)$/i.test(file)) {

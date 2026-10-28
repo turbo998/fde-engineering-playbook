@@ -1,5 +1,9 @@
 # FDE 工程实践手册
 
+> **Executive Summary / 核心结论概览**：本手册将 FDE（前场部署工程师）在客户现场的交付过程提炼为 **4 阶段闭环工程方法**：（1）将模糊业务痛点锚定为可观察的业务时刻与边界；（2）用结构化合同分别为事实（Facts）、建议（Recommendations）与决定（Approvals/Effects）建模；（3）通过 RPI（Research → Plan → Implement）与多代理协同完成实现；（4）用确定性模拟器、独立外部 Oracle 与不可抵消的取消资格红线完成生产级门禁验收。
+
+![FDE 4-Stage Closed-Loop Delivery Architecture](../assets/svg/fde-closed-loop-architecture.svg)
+
 本手册面向需要把模糊业务需求变成可验证交付的工程师。它是一套**待实测检验的工作方法**，不是当前仓库已具备全部业务能力的声明，也不是特定工具的安装指南。
 
 匿名旅行运营案例包含三种业务职责：到店风险处置、批准后的行程重排、供应商异常分析。开发这些能力时使用的方法包，与应用内部的业务 Agent，是两个不同层次。

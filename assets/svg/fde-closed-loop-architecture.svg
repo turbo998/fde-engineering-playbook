@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 480" width="960" height="480" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="fdeBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0B1120"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+    <marker id="arrowRight" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38BDF8"/>
+    </marker>
+  </defs>
+  <rect width="960" height="480" rx="16" fill="url(#fdeBg)"/>
+
+  <!-- Header -->
+  <rect x="20" y="18" width="920" height="74" rx="12" fill="#0F172A" stroke="#334155" stroke-width="1.5"/>
+  <text x="40" y="48" fill="#F8FAFC" font-size="19" font-weight="700">FDE (Forward Deployed Engineer) 4-Stage Closed-Loop Delivery Architecture</text>
+  <text x="40" y="73" fill="#94A3B8" font-size="12">From Ambiguous Business Moments to Contract-First RPI Specifications, Parallel Subagent Execution &amp; Deterministic Oracle Gates</text>
+  <rect x="760" y="32" width="164" height="46" rx="8" fill="#1E293B" stroke="#38BDF8" stroke-width="1.2"/>
+  <text x="842" y="52" text-anchor="middle" fill="#38BDF8" font-size="11" font-weight="700">CLOSED-LOOP HARNESS</text>
+  <text x="842" y="68" text-anchor="middle" fill="#E2E8F0" font-size="11">4 Stages · 12 Cases</text>
+
+  <!-- Stage 01 -->
+  <rect x="20" y="110" width="215" height="276" rx="12" fill="#0F172A" stroke="#0EA5E9" stroke-width="1.8"/>
+  <rect x="20" y="110" width="215" height="44" rx="12" fill="#0284C7"/>
+  <text x="127" y="130" text-anchor="middle" fill="#E0F2FE" font-size="11" font-weight="700">STAGE 01 · 2–4 WEEK PILOT</text>
+  <text x="127" y="146" text-anchor="middle" fill="#FFFFFF" font-size="12.5" font-weight="700">Forward Discovery &amp; Value</text>
+  <text x="34" y="176" fill="#38BDF8" font-size="11.5" font-weight="700">Observable Business Moment</text>
+  <text x="34" y="196" fill="#CBD5E1" font-size="11">• Separate facts vs hypotheses</text>
+  <text x="34" y="214" fill="#CBD5E1" font-size="11">• Anchor 2–4 week funded pilot</text>
+  <text x="34" y="232" fill="#CBD5E1" font-size="11">• Define read / draft / approval</text>
+  <text x="34" y="250" fill="#CBD5E1" font-size="11">  action &amp; tenant boundaries</text>
+  <text x="34" y="268" fill="#CBD5E1" font-size="11">• Surface unknown policy items</text>
+  <text x="34" y="286" fill="#CBD5E1" font-size="11">  instead of LLM guessing</text>
+  <rect x="34" y="334" width="187" height="36" rx="6" fill="#1E293B" stroke="#0EA5E9"/>
+  <text x="127" y="356" text-anchor="middle" fill="#38BDF8" font-size="11" font-weight="700">Output: Problem Brief &amp; ROI</text>
+
+  <!-- Stage 02 -->
+  <rect x="255" y="110" width="215" height="276" rx="12" fill="#0F172A" stroke="#8B5CF6" stroke-width="1.8"/>
+  <rect x="255" y="110" width="215" height="44" rx="12" fill="#7C3AED"/>
+  <text x="362" y="130" text-anchor="middle" fill="#EDE9FE" font-size="11" font-weight="700">STAGE 02 · RPI SPECIFICATION</text>
+  <text x="362" y="146" text-anchor="middle" fill="#FFFFFF" font-size="12.5" font-weight="700">Contract-First Spec (RPI)</text>
+  <text x="269" y="176" fill="#C4B5FD" font-size="11.5" font-weight="700">Research → Plan → Implement</text>
+  <text x="269" y="196" fill="#CBD5E1" font-size="11">• Strict Zod schemas (packages/</text>
+  <text x="269" y="214" fill="#CBD5E1" font-size="11">  contracts) for facts &amp; effects</text>
+  <text x="269" y="232" fill="#CBD5E1" font-size="11">• Bind approvalId, resource</text>
+  <text x="269" y="250" fill="#CBD5E1" font-size="11">  version &amp; idempotencyKey</text>
+  <text x="269" y="268" fill="#CBD5E1" font-size="11">• Freeze S01–S12 acceptance</text>
+  <text x="269" y="286" fill="#CBD5E1" font-size="11">  criteria before writing code</text>
+  <rect x="269" y="334" width="187" height="36" rx="6" fill="#1E293B" stroke="#8B5CF6"/>
+  <text x="362" y="356" text-anchor="middle" fill="#C4B5FD" font-size="11" font-weight="700">Output: Frozen Zod Contracts</text>
+
+  <!-- Stage 03 -->
+  <rect x="490" y="110" width="215" height="276" rx="12" fill="#0F172A" stroke="#10B981" stroke-width="1.8"/>
+  <rect x="490" y="110" width="215" height="44" rx="12" fill="#059669"/>
+  <text x="597" y="130" text-anchor="middle" fill="#D1FAE5" font-size="11" font-weight="700">STAGE 03 · CONTEXT &amp; AGENTS</text>
+  <text x="597" y="146" text-anchor="middle" fill="#FFFFFF" font-size="12.5" font-weight="700">Multi-Agent Execution</text>
+  <text x="504" y="176" fill="#6EE7B7" font-size="11.5" font-weight="700">Harnesses &amp; Context Isolation</text>
+  <text x="504" y="196" fill="#CBD5E1" font-size="11">• Compare Baseline vs HVE vs</text>
+  <text x="504" y="214" fill="#CBD5E1" font-size="11">  Superpowers vs gstack</text>
+  <text x="504" y="232" fill="#CBD5E1" font-size="11">• Progressive SKILL.md loading</text>
+  <text x="504" y="250" fill="#CBD5E1" font-size="11">  &amp; isolated neutral seed export</text>
+  <text x="504" y="268" fill="#CBD5E1" font-size="11">• Role-scoped subagents (Plan,</text>
+  <text x="504" y="286" fill="#CBD5E1" font-size="11">  Implement, Challenger Review)</text>
+  <rect x="504" y="334" width="187" height="36" rx="6" fill="#1E293B" stroke="#10B981"/>
+  <text x="597" y="356" text-anchor="middle" fill="#6EE7B7" font-size="11" font-weight="700">Output: Verified App Artifact</text>
+
+  <!-- Stage 04 -->
+  <rect x="725" y="110" width="215" height="276" rx="12" fill="#0F172A" stroke="#F59E0B" stroke-width="1.8"/>
+  <rect x="725" y="110" width="215" height="44" rx="12" fill="#D97706"/>
+  <text x="832" y="130" text-anchor="middle" fill="#FEF3C7" font-size="11" font-weight="700">STAGE 04 · VERIFICATION GATE</text>
+  <text x="832" y="146" text-anchor="middle" fill="#FFFFFF" font-size="12.5" font-weight="700">Deterministic Harness &amp; Gate</text>
+  <text x="739" y="176" fill="#FCD34D" font-size="11.5" font-weight="700">Oracle, Simulator &amp; Telemetry</text>
+  <text x="739" y="196" fill="#CBD5E1" font-size="11">• Deterministic SQLite simulator</text>
+  <text x="739" y="214" fill="#CBD5E1" font-size="11">  with fault &amp; clock injection</text>
+  <text x="739" y="232" fill="#CBD5E1" font-size="11">• Independent external oracle</text>
+  <text x="739" y="250" fill="#CBD5E1" font-size="11">  (never trust self-reported OK)</text>
+  <text x="739" y="268" fill="#CBD5E1" font-size="11">• Atomic token/budget ledger</text>
+  <text x="739" y="286" fill="#CBD5E1" font-size="11">  &amp; 65/65 automated gate tests</text>
+  <rect x="739" y="334" width="187" height="36" rx="6" fill="#1E293B" stroke="#F59E0B"/>
+  <text x="832" y="356" text-anchor="middle" fill="#FCD34D" font-size="11" font-weight="700">Output: Production Audit Gate</text>
+
+  <!-- Connecting Arrows -->
+  <line x1="235" y1="248" x2="253" y2="248" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrowRight)"/>
+  <line x1="470" y1="248" x2="488" y2="248" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrowRight)"/>
+  <line x1="705" y1="248" x2="723" y2="248" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrowRight)"/>
+
+  <!-- Closed-Loop Feedback Bar -->
+  <rect x="20" y="402" width="920" height="58" rx="10" fill="#0F172A" stroke="#38BDF8" stroke-width="1.5"/>
+  <text x="40" y="427" fill="#38BDF8" font-size="12.5" font-weight="700">CLOSED-LOOP TELEMETRY &amp; GOVERNANCE FEEDBACK (STAGE 04 → STAGE 01)</text>
+  <text x="40" y="447" fill="#E2E8F0" font-size="11.5">Disqualification rules (unauthorized effects, stale-version writes, cross-tenant leaks, unapproved spend) feed directly back into Contract &amp; Spec refinement.</text>
+</svg>

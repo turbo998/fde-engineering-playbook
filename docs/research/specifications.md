@@ -1,5 +1,7 @@
 # 规格驱动补充：Spec Kit 与 OpenSpec
 
+> **Executive Summary / 核心结论概览**：本文对比两种规格驱动工程工具：**Spec Kit**（通过 `specify → plan → tasks → implement → converge` 检查代码状态与意图的未收敛差距）与 **OpenSpec**（将当前基线行为 `specs` 与在途增量变更 `changes` 分离管理），为 FDE 在复杂业务规则演进中维护“需求—设计—实现”可追溯性提供补充参考。
+
 两者仅作文档研究，不加入四组编码实验。检索日期 2026-09-29。固定 Spec Kit `8d3f64cdccc877b6a297bc8167131103bb5b8ca0`、OpenSpec `d4e1c77ebae0bd96a7c649fa35edef997989450a`。
 
 ## Spec Kit：从意图到实现，再检验未完成工作

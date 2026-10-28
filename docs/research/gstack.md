@@ -1,5 +1,7 @@
 # gstack 深入研究：角色工作流与浏览器执行
 
+> **Executive Summary / 核心结论概览**：gstack（`garrytan/gstack`）将产品澄清（`office-hours`）、CEO/架构/设计评审、QA、真实浏览器守护进程（Browse Daemon）与发布复盘封装为角色化技能入口，并通过 `defineHost` 适配不同宿主（Claude Code / Codex）；在评测中需将其视为包含浏览器工具链与跨 CLI 审查依赖的完整系统，而非单纯的 Markdown 提示词集合。
+
 检索日期：2026-09-29。固定快照：`garrytan/gstack@65bfb0ce49da807698359ca033a05709e342c684`，VERSION `1.91.6.0`。未安装 gstack，未执行原生组或真实浏览器业务实验。
 
 ## 从角色入口看能力

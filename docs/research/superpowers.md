@@ -1,5 +1,7 @@
 # Superpowers 深入研究：任务纪律与完成证据
 
+> **Executive Summary / 核心结论概览**：Superpowers（`obra/superpowers`）通过可组合技能（`brainstorming → writing-plans → executing-plans / subagent-driven-development → verification-before-completion`）约束模型“未经澄清直接写代码、未经新鲜验证即宣称完成”的倾向，强调将模糊意图转化为具有明确接口签名、失败先行测试（TDD）与独立审查边界的任务单元。
+
 检索日期：2026-09-29。固定快照：`obra/superpowers@8ca22dba9a94f28898bbce59f2537ff4d87c747d`；发布说明 v6.4.2。研究范围是技能、说明和发布记录，未安装或执行。
 
 ## 不把 README 当成全部行为

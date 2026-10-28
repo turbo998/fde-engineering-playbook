@@ -1,5 +1,9 @@
 # AI 辅助工程方法对比
 
+> **Executive Summary / 核心结论概览**：本文从宿主 runtime、工程方法包（HVE / Superpowers / gstack / Spec Kit / OpenSpec）与被交付业务应用三个正交层次，系统对比 AI 辅助工程方法对 FDE（Forward Deployed Engineer）交付的影响。核心结论：**工程方法包提供的是澄清、规划（RPI）、上下文隔离与审查约束，而非业务运行时本身**；评测必须在固定业务合同（Zod）、相同合成数据与独立外部 Oracle 下隔离方法包变量。
+
+![FDE 4-Stage Closed-Loop Delivery Architecture](../assets/svg/fde-closed-loop-architecture.svg)
+
 本文比较的是**开发工作流与工程方法包**，不是酒店业务的 Agent 运行时，也不是完整的 FDE 技术栈。FDE 在此指 Forward Deployed Engineer：围绕具体业务问题，完成澄清、实现、集成、验证和交付。
 
 **证据状态：公开源码与文档研究；尚无本项目的四组实测成绩。** 文档检索基准为 2026-09-29。以下适用性判断是研究者解释，不代表上游承诺、客户采纳证明或性能结论。

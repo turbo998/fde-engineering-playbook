@@ -1,5 +1,7 @@
 # HVE 深入研究：证据连续性与组织约束
 
+> **Executive Summary / 核心结论概览**：HVE（`microsoft/hve-core`）通过拆分 `agents / prompts / instructions / skills` 与基于证据充分性的 RPI（`Research → Plan → Implement → Review → Follow-up`）生命周期，解决多阶段工程交付中的证据断层与职责漂移问题；其核心不是机械串联所有阶段，而是先评估现有证据完备度（research readiness）并把验证命令结果与遗留项（Follow-ups）结构化绑定。
+
 检索日期：2026-09-29。固定快照：`microsoft/hve-core@180c85492b5a20380927200ddf926fd712e7d9d1`。本文是源码/文档研究，不是安装或效果实测。
 
 ## 定位与证据分层

@@ -1,5 +1,9 @@
 # 中立底座架构与信任边界
 
+> **Executive Summary / 核心结论概览**：本文定义了 FDE 实验与评测底座的中立架构与安全信任边界。核心设计原则是 **“模拟器不做审批防火墙，外部评估器不信应用自报成功”**：`packages/contracts` 冻结严格 Zod 协议，`packages/lab` 提供固定时钟、版本化合成资源、SQLite 单一读事务快照与原子预算准入账本，`seed-export.ts` 通过 20 文件白名单与 SHA-256 校验保证各实验组从零污染的空白业务种子起步。
+
+![FDE 4-Stage Closed-Loop Delivery Architecture](../assets/svg/fde-closed-loop-architecture.svg)
+
 ## 当前已实现的组件
 
 | 路径 | 职责 | 不承担的职责 |

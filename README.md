@@ -1,4 +1,29 @@
-# FDE Engineering Playbook
+# FDE Engineering Playbook (`fde-engineering-playbook`)
+
+**语言 / Language**: **[中文 (Chinese)](README.md)** | **[English](README.en.md)** · **在线交互式实践书 / Online Interactive Book**: **[FDE on GitHub Copilot Practice Book](https://turbo998.github.io/FDE-on-GitHub-Copilot-Practice-Book/)**
+
+> **Executive Summary / 核心结论概览**：本仓库是面向 **FDE（Forward Deployed Engineer，前场部署工程师）** 的方法学研究、现场交付手册与可验证中立评测底座（TypeScript + Fastify + React + SQLite + Zod）。核心结论：
+> 1. **四阶段闭环交付架构（4-Stage Closed-Loop Delivery）**：FDE 的高价值交付将 **前场痛点发现（Stage 01，2–4 周价值锚定）→ 契约优先的 RPI 规格冻结（Stage 02，Research → Plan → Implement）→ 多代理上下文隔离实现（Stage 03）→ 确定性模拟器与外部 Oracle 门禁（Stage 04）** 闭环串联。
+> 2. **工程方法包 vs. 业务运行时正交解耦**：深入拆解 **HVE Core**、**Superpowers**、**gstack**、**Spec Kit** 与 **OpenSpec** 五大主流 AI 工程工作流（Harness），通过 20 文件白名单种子导出（`seed-export.ts`）、严格 Zod 合同（`packages/contracts`）与 12 族业务验收情景（`S01–S12`）隔离评估工程方法包的真实收益。
+> 3. **确定性验证与一票否决护栏**：模拟器不充当审批防火墙，评估器不轻信模型自报的 `booked/confirmed`；采用单一 SQLite 读事务快照与原子化 Token 预算预留账本（`65/65` 自动化测试全绿通过）。
+
+![FDE 4-Stage Closed-Loop Delivery Architecture](assets/svg/fde-closed-loop-architecture.svg)
+
+*配图说明：FDE 四阶段闭环交付架构（`assets/svg/fde-closed-loop-architecture.svg`）。展示从 Stage 01 2–4 周前场发现与边界定义、Stage 02 严格 Zod 契约与 RPI（Research → Plan → Implement）规格冻结、Stage 03 多代理工作流（Baseline / HVE / Superpowers / gstack）并行实现，到 Stage 04 确定性 SQLite 模拟器、独立外部 Oracle 与生产遥测反馈的完整闭环。*
+
+## 在线交互式实践书与核心章节导览 (Practice Book & Chapter Index)
+
+配套在线交互式电子书：**[https://turbo998.github.io/FDE-on-GitHub-Copilot-Practice-Book/](https://turbo998.github.io/FDE-on-GitHub-Copilot-Practice-Book/)**
+
+| 章节 / Chapter | 核心主题 | 本仓库对应章节入口 |
+| --- | --- | --- |
+| **Chapter 01** | FDE 角色定位与四阶段闭环运行模型（2–4 周价值锚定与边界划分） | [`docs/01-role-and-operating-model.md`](docs/01-role-and-operating-model.md) · [`docs/fde-playbook.md`](docs/fde-playbook.md) |
+| **Chapter 02** | GitHub Copilot 架构、工程方法包（HVE / Superpowers / gstack）与上下文工程 | [`docs/02-github-copilot-architecture-and-customization.md`](docs/02-github-copilot-architecture-and-customization.md) · [`docs/comparison.md`](docs/comparison.md) |
+| **Chapter 03** | 端到端 FDE 现场交付标准作业程序（6 步 SOP 与 5 套可复用交付模板） | [`docs/03-end-to-end-delivery-playbooks.md`](docs/03-end-to-end-delivery-playbooks.md) · [`templates/discovery.md`](templates/discovery.md) |
+| **Chapter 04** | 企业实战案例与复杂运营场景剖析（`UC01–UC08` 到店风险、审批绑定与交接） | [`docs/04-enterprise-case-studies.md`](docs/04-enterprise-case-studies.md) · [`docs/scenario.md`](docs/scenario.md) · [`docs/acceptance.md`](docs/acceptance.md) |
+| **Chapter 05** | 度量体系、一票否决红线（Disqualification Gates）、账本治理与常见反模式 | [`docs/05-metrics-governance-and-anti-patterns.md`](docs/05-metrics-governance-and-anti-patterns.md) · [`docs/architecture.md`](docs/architecture.md) · [`docs/protocol.md`](docs/protocol.md) |
+
+---
 
 以证据为基础的中文 AI 辅助工程研究：把匿名旅行运营需求变成可验收合同，比较工程方法，而不把宣传或测试替身当作模型成绩。
 
